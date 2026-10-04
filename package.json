@@ -1,0 +1,36 @@
+{
+  "name": "easycrypt-companion",
+  "displayName": "EasyCrypt Companion",
+  "description": "Interactive proof development for EasyCrypt in VS Code, with Proof General keybindings for Emacs users.",
+  "version": "0.0.1",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "easycrypt",
+    "proof assistant",
+    "cryptography",
+    "proof general",
+    "theorem prover"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "easycrypt",
+        "aliases": [
+          "EasyCrypt",
+          "easycrypt"
+        ],
+        "extensions": [
+          ".ec",
+          ".eca"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  }
+}
