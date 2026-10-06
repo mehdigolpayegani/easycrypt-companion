@@ -8,7 +8,7 @@ import {
   skipBlanksBackward,
 } from "../src/sentences";
 
-/** The text of every sentence, from its content start to its end. */
+/** The text of every sentence. */
 function split(text: string): string[] {
   return sentencesFrom(text, 0).map((s) => text.slice(s.contentStart, s.end));
 }

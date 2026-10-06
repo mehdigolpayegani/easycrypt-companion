@@ -1,21 +1,20 @@
-// Splits an EasyCrypt script into sentences the way EasyCrypt's lexer does
-// (src/ecLexer.mll): a sentence ends at a `.` followed by a blank, a newline
-// or the end of input, outside comments and strings.
+// Splits a script into sentences like EasyCrypt's lexer (src/ecLexer.mll):
+// a sentence ends at a `.` before whitespace, outside comments and strings.
 
 export interface Sentence {
-  /** Offset where scanning for this sentence started (end of the previous one). */
+  /** Where scanning started: the end of the previous sentence. */
   start: number;
-  /** First offset that is not whitespace or a comment: what is sent to EasyCrypt. */
+  /** First character that is not whitespace or a comment. */
   contentStart: number;
-  /** Offset just after the terminating `.`. */
+  /** Just after the final `.`. */
   end: number;
 }
 
-// `binop` in the lexer: opchar+ | '`' opchar+ '`' | '\\' ichar+
+// The lexer's `binop`.
 const BINOP = "(?:[=<>+\\-*/\\\\%&^|:#$]+|`[=<>+\\-*/\\\\%&^|:#$]+`|\\\\[A-Za-z0-9_']+)";
-// `'(' blank* binop blank* ')'`: a parenthesised operator such as `(*)` or `( + )`.
+// A parenthesised operator: `(*)`, `( + )`.
 const PAREN_OP_RE = new RegExp(`\\([ \\t\\r]*${BINOP}[ \\t\\r]*\\)`, "y");
-// `"(*" binop "*)"`: skipped by the lexer like a comment, e.g. `(*-----*)`.
+// `(*op*)`, e.g. `(*-----*)`: skipped by the lexer like a comment.
 const STAR_OP_RE = new RegExp(`\\(\\*${BINOP}\\*\\)`, "y");
 
 function isBlank(c: string | undefined): boolean {
@@ -28,10 +27,7 @@ function matchAt(re: RegExp, text: string, i: number): number {
   return m ? m[0].length : 0;
 }
 
-/**
- * Classifies the `(` at `i` as ocamllex would (longest match, then the rule
- * listed first): a skipped `(*op*)`, a parenthesised operator, or neither.
- */
+/** Classifies the `(` at `i` like ocamllex: longest match, then first rule. */
 function classifyParen(text: string, i: number): { kind: "skip" | "operator"; next: number } | undefined {
   const skip = matchAt(STAR_OP_RE, text, i);
   const op = matchAt(PAREN_OP_RE, text, i);
@@ -40,13 +36,13 @@ function classifyParen(text: string, i: number): { kind: "skip" | "operator"; ne
   return undefined;
 }
 
-/** If `text[i]` opens a parenthesised operator such as `(*)`, the offset after it. */
+/** Offset after the parenthesised operator at `i`, if any. */
 function skipOperatorParen(text: string, i: number): number | undefined {
   const c = classifyParen(text, i);
   return c?.kind === "operator" ? c.next : undefined;
 }
 
-/** Returns the offset after the comment opened at `i`, or undefined if unterminated. */
+/** Offset after the comment opened at `i`; undefined if unterminated. */
 function skipComment(text: string, i: number): number | undefined {
   let depth = 0;
   let j = i;
@@ -65,7 +61,7 @@ function skipComment(text: string, i: number): number | undefined {
   return undefined;
 }
 
-/** Returns the offset after the string opened at `i`, or undefined if unterminated. */
+/** Offset after the string opened at `i`; undefined if unterminated. */
 function skipString(text: string, i: number): number | undefined {
   let j = i + 1;
   while (j < text.length) {
@@ -76,10 +72,7 @@ function skipString(text: string, i: number): number | undefined {
   return undefined;
 }
 
-/**
- * If a comment (or a skipped `(*op*)`) starts at `i`: the offset after it, or
- * null if it is unterminated. Undefined if no comment starts at `i`.
- */
+/** Offset after the comment at `i`: null if unterminated, undefined if none. */
 function commentAt(text: string, i: number): number | null | undefined {
   if (text[i] !== "(" || text[i + 1] !== "*") return undefined;
   const paren = classifyParen(text, i);
@@ -88,11 +81,7 @@ function commentAt(text: string, i: number): number | null | undefined {
   return skipComment(text, i) ?? null;
 }
 
-/**
- * Offset of the first character at or after `from` that is not whitespace or
- * part of a comment, or undefined if there is none (end of text or an
- * unterminated comment).
- */
+/** First offset from `from` that is not whitespace or a comment, if any. */
 export function skipBlanksAndComments(text: string, from: number): number | undefined {
   let i = from;
   while (i < text.length) {
@@ -108,7 +97,7 @@ export function skipBlanksAndComments(text: string, from: number): number | unde
   return undefined;
 }
 
-/** The next complete sentence starting at `from`, or undefined if there is none. */
+/** The next complete sentence from `from`, if any. */
 export function nextSentence(text: string, from: number): Sentence | undefined {
   const contentStart = skipBlanksAndComments(text, from);
   if (contentStart === undefined) return undefined;
@@ -139,7 +128,7 @@ export function nextSentence(text: string, from: number): Sentence | undefined {
   return undefined;
 }
 
-/** All complete sentences starting at `from`, in order. */
+/** All complete sentences from `from`. */
 export function sentencesFrom(text: string, from: number): Sentence[] {
   const result: Sentence[] = [];
   let s = nextSentence(text, from);
@@ -150,11 +139,7 @@ export function sentencesFrom(text: string, from: number): Sentence[] {
   return result;
 }
 
-/**
- * Where the cursor goes after processing up to `offset` (Proof General's
- * `proof-script-next-command-advance`): past spaces and tabs, and to the start
- * of the next line if the rest of the line is empty.
- */
+/** Where Proof General puts the cursor after processing up to `offset`. */
 export function followPosition(text: string, offset: number): number {
   let i = offset;
   while (text[i] === " " || text[i] === "\t") i++;
@@ -163,17 +148,14 @@ export function followPosition(text: string, offset: number): number {
   return i;
 }
 
-/** `offset` moved back over whitespace, as Proof General does before "process to point". */
+/** `offset` moved back over whitespace. */
 export function skipBlanksBackward(text: string, offset: number): number {
   let i = Math.min(offset, text.length);
   while (i > 0 && isBlank(text[i - 1])) i--;
   return i;
 }
 
-/**
- * Converts a byte offset into `s` (as EasyCrypt reports error locations, in
- * UTF-8 bytes) into a JavaScript string offset.
- */
+/** Converts a UTF-8 byte offset into `s`, as EasyCrypt reports them, to a string offset. */
 export function byteToCharOffset(s: string, byteOffset: number): number {
   if (byteOffset <= 0) return 0;
   const bytes = Buffer.from(s, "utf8");

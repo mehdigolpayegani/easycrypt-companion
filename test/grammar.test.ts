@@ -1,4 +1,4 @@
-// Tokenizes snippets with the same TextMate engine VS Code uses.
+// Tokenizes snippets with the TextMate engine VS Code uses.
 
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
@@ -31,7 +31,7 @@ async function loadRegistry(): Promise<tm.Registry> {
 
 const registryPromise = loadRegistry();
 
-/** Tokenizes `text`; maps the text of each token to its scopes (first occurrence wins). */
+/** Maps each token's text to its scopes (first occurrence wins). */
 async function scopesOf(scope: string, text: string): Promise<Map<string, string[]>> {
   const grammar = (await (await registryPromise).loadGrammar(scope))!;
   const result = new Map<string, string[]>();
@@ -82,7 +82,7 @@ test("a theory name is a qualifier only when something follows the dot", async (
   const s = await scopesOf("source.easycrypt", "require import AllCore StdOrder.\nrewrite Ring.addrC GEO.c.");
   assert.equal(innermost(s.get("Ring")), "entity.name.namespace.easycrypt");
   assert.equal(innermost(s.get("GEO")), "entity.name.namespace.easycrypt");
-  // `StdOrder.` ends the sentence: it must look like `AllCore`, which is plain text.
+  // `StdOrder.` ends the sentence, so it is plain text like `AllCore`.
   for (const [text, scopes] of s) {
     if (text.includes("StdOrder")) assert.equal(innermost(scopes), "source.easycrypt", text);
   }

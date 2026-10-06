@@ -1,8 +1,5 @@
-// Generates syntaxes/easycrypt.tmLanguage.json from EasyCrypt's lexer.
-//
-// Keywords are read from the `(* KW: category *)` annotations in
-// src/ecLexer.mll, like EasyCrypt's own scripts/srctx/keywords does, so the
-// highlighting follows the version of EasyCrypt it is generated from:
+// Generates syntaxes/easycrypt.tmLanguage.json from the `(* KW: category *)`
+// annotations in EasyCrypt's lexer:
 //
 //   node scripts/gen-grammar.mjs path/to/easycrypt/src/ecLexer.mll
 
@@ -135,7 +132,7 @@ const grammar = {
       patterns: [
         { name: "variable.other.memory.easycrypt", match: `&(?:${IDENT}|[0-9]+)` },
         { name: "storage.type.variable.easycrypt", match: `'${IDENT}` },
-        // A qualifier such as `Ring.` in `Ring.addrC`, but not a name that ends a sentence (`import Ring.`).
+        // `Ring.` in `Ring.addrC`, but not a name ending a sentence (`import Ring.`).
         { name: "entity.name.namespace.easycrypt", match: `\\b[A-Z][A-Za-z0-9_']*(?=\\.[A-Za-z_(])` },
       ],
     },
