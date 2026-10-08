@@ -17,13 +17,17 @@
     "proof general",
     "theorem prover"
   ],
+  "main": "./out/src/extension.js",
+  "activationEvents": [],
   "scripts": {
     "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
     "test": "npm run compile && node --test --test-concurrency=1 out/test/*.test.js",
     "grammar": "node scripts/gen-grammar.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/vscode": "~1.85.0",
     "typescript": "^5.4.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
@@ -41,6 +45,13 @@
           ".eca"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "easycrypt-output",
+        "aliases": [
+          "EasyCrypt Output"
+        ],
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
@@ -48,6 +59,239 @@
         "language": "easycrypt",
         "scopeName": "source.easycrypt",
         "path": "./syntaxes/easycrypt.tmLanguage.json"
+      },
+      {
+        "language": "easycrypt-output",
+        "scopeName": "source.easycrypt.output",
+        "path": "./syntaxes/easycrypt-output.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "easycryptCompanion.next",
+        "title": "Next Command",
+        "category": "EasyCrypt",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "easycryptCompanion.undo",
+        "title": "Undo Last Command",
+        "category": "EasyCrypt",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "easycryptCompanion.gotoCursor",
+        "title": "Process to Cursor",
+        "category": "EasyCrypt",
+        "icon": "$(debug-step-into)"
+      },
+      {
+        "command": "easycryptCompanion.processBuffer",
+        "title": "Process to End of File",
+        "category": "EasyCrypt",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "easycryptCompanion.retractBuffer",
+        "title": "Retract Buffer (Reset)",
+        "category": "EasyCrypt",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "easycryptCompanion.interrupt",
+        "title": "Interrupt Prover",
+        "category": "EasyCrypt",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "easycryptCompanion.exit",
+        "title": "Exit Prover",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.restart",
+        "title": "Restart Prover",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.layout",
+        "title": "Reset Layout (Goals and Response Panes)",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.showGoals",
+        "title": "Show Goals",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.gotoProcessedEnd",
+        "title": "Go to End of Processed Region",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.sendCommand",
+        "title": "Send Command to Prover...",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.print",
+        "title": "Print...",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.search",
+        "title": "Search Lemmas...",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.locate",
+        "title": "Locate...",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.toggleWeakCheck",
+        "title": "Toggle Weak-Check Mode",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.insertLastOutputAsComment",
+        "title": "Insert Last Output as Comment",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.clearResponse",
+        "title": "Clear Response Pane",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.statusMenu",
+        "title": "Prover Menu",
+        "category": "EasyCrypt"
+      },
+      {
+        "command": "easycryptCompanion.showLog",
+        "title": "Show Log",
+        "category": "EasyCrypt"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "easycryptCompanion.retractBuffer",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@1"
+        },
+        {
+          "command": "easycryptCompanion.undo",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@2"
+        },
+        {
+          "command": "easycryptCompanion.next",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@3"
+        },
+        {
+          "command": "easycryptCompanion.gotoCursor",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@4"
+        },
+        {
+          "command": "easycryptCompanion.processBuffer",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@5"
+        },
+        {
+          "command": "easycryptCompanion.interrupt",
+          "when": "editorLangId == easycrypt && easycryptCompanion.busy",
+          "group": "navigation@6"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "easycryptCompanion.statusMenu",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "EasyCrypt Companion",
+      "properties": {
+        "easycryptCompanion.executable": {
+          "type": "string",
+          "default": "easycrypt",
+          "markdownDescription": "Path to the `easycrypt` binary. When left as `easycrypt`, the extension looks on `PATH` and then in `~/.opam/*/bin`."
+        },
+        "easycryptCompanion.arguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra arguments passed after `easycrypt cli -emacs`, e.g. `[\"-I\", \"path/to/lib\", \"-timeout\", \"10\"]`."
+        },
+        "easycryptCompanion.layout": {
+          "type": "string",
+          "enum": [
+            "threePane",
+            "beside",
+            "manual"
+          ],
+          "enumDescriptions": [
+            "Script on the left, goals top-right, response bottom-right (like Proof General).",
+            "Open goals and response panes beside the script without changing the layout.",
+            "Never open the panes automatically; use the Show Goals and Reset Layout commands."
+          ],
+          "default": "threePane",
+          "description": "How the goals and response panes are arranged when proving starts."
+        },
+        "easycryptCompanion.followMode": {
+          "type": "string",
+          "enum": [
+            "locked",
+            "ignore"
+          ],
+          "enumDescriptions": [
+            "The cursor moves to the end of the processed region after Next and Undo (Proof General default).",
+            "The cursor never moves."
+          ],
+          "default": "locked",
+          "description": "How the cursor moves when commands are processed."
+        },
+        "easycryptCompanion.trace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log every command sent to and every reply received from EasyCrypt in the \"EasyCrypt Companion\" output channel."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[easycrypt-output]": {
+        "editor.lineNumbers": "off",
+        "editor.minimap.enabled": false,
+        "editor.renderLineHighlight": "none"
+      }
+    },
+    "colors": [
+      {
+        "id": "easycryptCompanion.processedBackground",
+        "description": "Background of the processed (locked) region of an EasyCrypt script.",
+        "defaults": {
+          "light": "#eaf8ff",
+          "dark": "#483d8b55",
+          "highContrast": "#483d8b55",
+          "highContrastLight": "#eaf8ff"
+        }
+      },
+      {
+        "id": "easycryptCompanion.queuedBackground",
+        "description": "Background of commands waiting to be processed by EasyCrypt.",
+        "defaults": {
+          "light": "#ffe4e1",
+          "dark": "#ba55d344",
+          "highContrast": "#ba55d344",
+          "highContrastLight": "#ffe4e1"
+        }
       }
     ]
   }

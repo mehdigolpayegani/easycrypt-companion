@@ -14,6 +14,7 @@ async function loadRegistry(): Promise<tm.Registry> {
   await oniguruma.loadWASM(wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength));
   const files: Record<string, string> = {
     "source.easycrypt": "easycrypt.tmLanguage.json",
+    "source.easycrypt.output": "easycrypt-output.tmLanguage.json",
   };
   return new tm.Registry({
     onigLib: Promise.resolve({
@@ -86,4 +87,18 @@ test("a theory name is a qualifier only when something follows the dot", async (
   for (const [text, scopes] of s) {
     if (text.includes("StdOrder")) assert.equal(innermost(scopes), "source.easycrypt", text);
   }
+});
+
+test("goal display", async () => {
+  const s = await scopesOf(
+    "source.easycrypt.output",
+    "Current goal (remaining: 2)\n\nType variables: <none>\n\nx: int\n------------------------------------------------------------------------\nforall y, x + y = y + x",
+  );
+  assert.equal(innermost(s.get("Current goal (remaining: 2)")), "markup.heading.goal.easycrypt");
+  assert.equal(innermost(s.get("x")), "variable.parameter.hypothesis.easycrypt");
+  assert.equal(
+    innermost(s.get("------------------------------------------------------------------------")),
+    "comment.line.separator.easycrypt",
+  );
+  assert.equal(innermost(s.get("forall")), "keyword.other.program.easycrypt");
 });

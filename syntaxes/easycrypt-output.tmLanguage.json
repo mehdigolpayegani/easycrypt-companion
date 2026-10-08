@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "EasyCrypt Output",
+  "scopeName": "source.easycrypt.output",
+  "comment": "The goals and response panes: EasyCrypt formulas plus the goal display layout.",
+  "patterns": [
+    {
+      "name": "markup.heading.goal.easycrypt",
+      "match": "^(?:Current goal(?: \\(remaining: \\d+\\))?|No more goals|Remaining lemmas to prove:|No active proof\\.)$"
+    },
+    {
+      "name": "comment.line.type-variables.easycrypt",
+      "match": "^Type variables: .*$"
+    },
+    {
+      "name": "comment.line.separator.easycrypt",
+      "match": "^-{8,}$"
+    },
+    {
+      "match": "^([A-Za-z_&][A-Za-z0-9_'&]*(?:,\\s*[A-Za-z_&][A-Za-z0-9_'&]*)*)(:)\\s",
+      "captures": {
+        "1": { "name": "variable.parameter.hypothesis.easycrypt" },
+        "2": { "name": "punctuation.separator.easycrypt" }
+      }
+    },
+    {
+      "name": "markup.bold.warning.easycrypt",
+      "match": "^Warning:"
+    },
+    {
+      "include": "source.easycrypt"
+    }
+  ]
+}
