@@ -23,11 +23,13 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "test": "npm run compile && node --test --test-concurrency=1 out/test/*.test.js",
-    "grammar": "node scripts/gen-grammar.mjs"
+    "grammar": "node scripts/gen-grammar.mjs",
+    "test:e2e": "npm run compile && node out/test/e2e/run.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "~1.85.0",
+    "@vscode/test-electron": "^2.5.2",
     "typescript": "^5.4.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
