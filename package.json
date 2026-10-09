@@ -214,6 +214,128 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "easycryptCompanion.next",
+        "key": "alt+down",
+        "when": "editorTextFocus && editorLangId == easycrypt && config.easycryptCompanion.keybindings.vscodeStyle"
+      },
+      {
+        "command": "easycryptCompanion.undo",
+        "key": "alt+up",
+        "when": "editorTextFocus && editorLangId == easycrypt && config.easycryptCompanion.keybindings.vscodeStyle"
+      },
+      {
+        "command": "easycryptCompanion.gotoCursor",
+        "key": "alt+right",
+        "when": "editorTextFocus && editorLangId == easycrypt && config.easycryptCompanion.keybindings.vscodeStyle"
+      },
+      {
+        "command": "easycryptCompanion.processBuffer",
+        "key": "alt+end",
+        "when": "editorTextFocus && editorLangId == easycrypt && config.easycryptCompanion.keybindings.vscodeStyle"
+      },
+      {
+        "command": "easycryptCompanion.retractBuffer",
+        "key": "alt+home",
+        "when": "editorTextFocus && editorLangId == easycrypt && config.easycryptCompanion.keybindings.vscodeStyle"
+      },
+      {
+        "command": "easycryptCompanion.next",
+        "key": "ctrl+c ctrl+n",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.undo",
+        "key": "ctrl+c ctrl+u",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.gotoCursor",
+        "key": "ctrl+c ctrl+enter",
+        "when": "editorTextFocus && editorLangId == easycrypt && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.gotoCursor",
+        "key": "ctrl+c ctrl+m",
+        "when": "editorTextFocus && editorLangId == easycrypt && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.processBuffer",
+        "key": "ctrl+c ctrl+b",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.retractBuffer",
+        "key": "ctrl+c ctrl+r",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.interrupt",
+        "key": "ctrl+c ctrl+c",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.exit",
+        "key": "ctrl+c ctrl+x",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.layout",
+        "key": "ctrl+c ctrl+l",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.layout",
+        "key": "ctrl+c ctrl+o",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.showGoals",
+        "key": "ctrl+c ctrl+p",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.gotoProcessedEnd",
+        "key": "ctrl+c ctrl+.",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.sendCommand",
+        "key": "ctrl+c ctrl+v",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.print",
+        "key": "ctrl+c ctrl+a ctrl+p",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.print",
+        "key": "ctrl+c ctrl+a ctrl+c",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.locate",
+        "key": "ctrl+c ctrl+a ctrl+l",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.search",
+        "key": "ctrl+c ctrl+f",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.insertLastOutputAsComment",
+        "key": "ctrl+c ctrl+;",
+        "when": "editorTextFocus && editorLangId == easycrypt && !editorReadonly && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.clearResponse",
+        "key": "ctrl+c ctrl+w",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      }
+    ],
     "configuration": {
       "title": "EasyCrypt Companion",
       "properties": {
@@ -229,6 +351,26 @@
           },
           "default": [],
           "markdownDescription": "Extra arguments passed after `easycrypt cli -emacs`, e.g. `[\"-I\", \"path/to/lib\", \"-timeout\", \"10\"]`."
+        },
+        "easycryptCompanion.keybindings.proofGeneral": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "always",
+            "never"
+          ],
+          "enumDescriptions": [
+            "Enable Proof General keys (C-c C-n, C-c C-u, C-c C-RET, ...) on macOS only, where Ctrl+C is not Copy.",
+            "Enable Proof General keys on every platform. On Linux and Windows this makes Ctrl+C a prefix key in EasyCrypt files, so it no longer copies.",
+            "Disable Proof General keys."
+          ],
+          "default": "auto",
+          "markdownDescription": "Proof General (Emacs) key bindings, e.g. `C-c C-n` to process the next command."
+        },
+        "easycryptCompanion.keybindings.vscodeStyle": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable Alt-based navigation keys: `Alt+Down` next, `Alt+Up` undo, `Alt+Right` to cursor, `Alt+End` to end of file, `Alt+Home` retract."
         },
         "easycryptCompanion.layout": {
           "type": "string",
