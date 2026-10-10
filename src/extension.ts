@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import { SessionManager } from "./manager";
+import { LANGUAGE, SessionManager } from "./manager";
 import { Panels, SCHEME } from "./panels";
 import { ProofSession } from "./session";
 import { followPosition } from "./sentences";
+import { registerOutline } from "./symbols";
 
 /** A possibly qualified identifier: `addrC`, `Ring.IntID.addrC`, `x'`. */
 const IDENT_RE = /[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*/;
@@ -181,6 +182,7 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
   });
   register("showLog", () => log.show());
 
+  registerOutline(context, LANGUAGE);
   warnAboutConflicts(context);
   return { currentSession: () => manager.currentSession() };
 }

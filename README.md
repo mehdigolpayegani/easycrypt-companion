@@ -32,6 +32,7 @@ Proof General keys are enabled on macOS by default. On Linux and Windows, `Ctrl+
 | `C-c C-a C-l` | | `locate` a name |
 | `C-c C-;` | | Insert the last response as a comment |
 | `C-c C-w` | | Clear the response pane |
+| `C-c v` | | Fold or unfold the proof, theory or module at the cursor |
 
 Every command is also in the Command Palette under "EasyCrypt:", and the main ones are buttons in the editor title bar.
 
@@ -47,6 +48,7 @@ The query commands take an optional argument, so you can bind your own keys:
 - **Editing retracts.** Instead of locking the processed region, editing inside it undoes EasyCrypt back to the edit.
 - **Errors** appear as a squiggle at the exact place EasyCrypt reports, in the Problems panel, and in the response pane. Processing stops at the first error.
 - **Cursor.** After next and undo the cursor moves to the end of the processed region, like Proof General's default `proof-follow-mode`. Set `easycryptCompanion.followMode` to `ignore` to keep it still.
+- **Outline and folding.** The Outline view, the breadcrumbs and Go to Symbol in Editor list the lemmas, operators, modules and theories of the file. Proofs, theories, sections and modules can be folded. Both follow the text as you type and do not need EasyCrypt to run.
 - **Weak-check mode** (`pragma Proofs:weak`, proofs are not checked) is toggled from the status bar item.
 - **One EasyCrypt process per file**, started with the file's folder as working directory, so `require` finds neighboring files and `easycrypt.project` is picked up.
 

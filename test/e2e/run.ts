@@ -24,6 +24,14 @@ proof.
   rewrite nonexist.
 qed.
 `,
+  "outline.ec": `theory T.
+  op x : int.
+  lemma l : x = x.
+  proof.
+    trivial.
+  qed.
+end T.
+`,
   "slow.ec": `require import AllCore.
 lemma slow (x y z : int) : (x + y) * (x - y) * z * z * z = x*x*z*z*z - y*y*z*z*z + 1.
 proof.

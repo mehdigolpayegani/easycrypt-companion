@@ -9,10 +9,12 @@ import { followPosition } from "../../src/sentences";
 
 const workspace = () => vscode.workspace.workspaceFolders![0].uri.fsPath;
 
-async function waitFor<T>(what: string, fn: () => T | undefined | false, timeoutMs = 60_000): Promise<T> {
+type Maybe<T> = T | undefined | false;
+
+async function waitFor<T>(what: string, fn: () => Maybe<T> | Promise<Maybe<T>>, timeoutMs = 60_000): Promise<T> {
   const start = Date.now();
   for (;;) {
-    const v = fn();
+    const v = await fn();
     if (v) return v;
     if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 50));
@@ -236,6 +238,38 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "outline and folding come from the declarations",
+    async () => {
+      const editor = await open("outline.ec");
+      const uri = editor.document.uri;
+      const symbols = await waitFor("outline", async () => {
+        const found = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", uri);
+        return found?.length ? found : undefined;
+      });
+      assert.deepEqual(
+        symbols.map((s) => [s.name, s.detail, vscode.SymbolKind[s.kind]]),
+        [["T", "theory", "Namespace"]],
+      );
+      assert.deepEqual(
+        symbols[0].children.map((s) => [s.name, vscode.SymbolKind[s.kind]]),
+        [
+          ["x", "Operator"],
+          ["l", "Function"],
+        ],
+      );
+      assert.equal(editor.document.getText(symbols[0].children[1].selectionRange), "l");
+
+      const folds = await vscode.commands.executeCommand<vscode.FoldingRange[]>("vscode.executeFoldingRangeProvider", uri);
+      assert.deepEqual(
+        folds.map((f) => [f.start, f.end]),
+        [
+          [0, 5],
+          [2, 5],
+        ],
+      );
+    },
+  ],
+  [
     "VS Code registers the Proof General key chords",
     async () => {
       await vscode.commands.executeCommand("workbench.action.openDefaultKeybindingsFile");
@@ -257,6 +291,7 @@ const tests: Array<[string, () => Promise<void>]> = [
         ["ctrl+c ctrl+f", "search"],
         ["alt+down", "next"],
       ];
+      assert.match(text, /"key":\s*"ctrl\+c v",\s*"command":\s*"editor\.toggleFold"/, "C-c v -> fold");
       for (const [key, command] of expected) {
         const re = new RegExp(`"key":\\s*"${key.replace(/\+/g, "\\+")}",\\s*"command":\\s*"easycryptCompanion\\.${command}"`);
         assert.match(text, re, `${key} -> ${command}`);

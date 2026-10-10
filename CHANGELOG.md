@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Outline, breadcrumbs and Go to Symbol in Editor for the current file.
+- Folding of proofs, theories, sections, modules and comments (`C-c v`).
+
 ## 0.1.0
 
 First version.

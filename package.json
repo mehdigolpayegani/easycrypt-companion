@@ -336,6 +336,11 @@
         "command": "easycryptCompanion.clearResponse",
         "key": "ctrl+c ctrl+w",
         "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "editor.toggleFold",
+        "key": "ctrl+c v",
+        "when": "editorTextFocus && editorLangId == easycrypt && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
       }
     ],
     "configuration": {

@@ -128,6 +128,39 @@ export function nextSentence(text: string, from: number): Sentence | undefined {
   return undefined;
 }
 
+export interface Span {
+  start: number;
+  end: number;
+}
+
+/** The comments of `text`, and its `{ ... }` blocks outside comments and strings. */
+export function commentsAndBraces(text: string): { comments: Span[]; braces: Span[] } {
+  const comments: Span[] = [];
+  const braces: Span[] = [];
+  const open: number[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (c === "(") {
+      const comment = commentAt(text, i);
+      if (comment === undefined) {
+        i = skipOperatorParen(text, i) ?? i + 1;
+      } else {
+        const end = comment ?? text.length; // unterminated: runs to the end
+        comments.push({ start: i, end });
+        i = end;
+      }
+    } else if (c === '"') {
+      i = skipString(text, i) ?? text.length;
+    } else {
+      if (c === "{") open.push(i);
+      else if (c === "}" && open.length > 0) braces.push({ start: open.pop()!, end: i + 1 });
+      i++;
+    }
+  }
+  return { comments, braces };
+}
+
 /** All complete sentences from `from`. */
 export function sentencesFrom(text: string, from: number): Sentence[] {
   const result: Sentence[] = [];

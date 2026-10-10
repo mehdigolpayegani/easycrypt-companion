@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   byteToCharOffset,
+  commentsAndBraces,
   followPosition,
   nextSentence,
   sentencesFrom,
@@ -105,4 +106,17 @@ test("byteToCharOffset converts UTF-8 byte offsets", () => {
   assert.equal(byteToCharOffset(s, byteStart), "(* é → *) rewrite ".length);
   assert.equal(byteToCharOffset("abc", 2), 2);
   assert.equal(byteToCharOffset("abc", 99), 3);
+});
+
+test("commentsAndBraces finds comments and brace blocks", () => {
+  const text = 'a (* c (* n *) *) { b "}" (*) { } } (*---*) (* open';
+  const { comments, braces } = commentsAndBraces(text);
+  assert.deepEqual(
+    comments.map((c) => text.slice(c.start, c.end)),
+    ["(* c (* n *) *)", "(*---*)", "(* open"],
+  );
+  assert.deepEqual(
+    braces.map((b) => text.slice(b.start, b.end)),
+    ["{ }", '{ b "}" (*) { } }'],
+  );
 });
