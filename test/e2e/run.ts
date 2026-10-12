@@ -3,7 +3,7 @@
 
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { runTests } from "@vscode/test-electron";
 
 const FILES: Record<string, string> = {
@@ -32,6 +32,7 @@ qed.
   qed.
 end T.
 `,
+  "_build/Copy.ec": "lemma build_copy_lemma : true by [].\n",
   "slow.ec": `require import AllCore.
 lemma slow (x y z : int) : (x + y) * (x - y) * z * z * z = x*x*z*z*z - y*y*z*z*z + 1.
 proof.
@@ -44,7 +45,10 @@ async function main(): Promise<void> {
   const scratch = mkdtempSync(join(tmpdir(), "ecc-e2e-"));
   const workspace = join(scratch, "workspace");
   mkdirSync(workspace);
-  for (const [name, text] of Object.entries(FILES)) writeFileSync(join(workspace, name), text);
+  for (const [name, text] of Object.entries(FILES)) {
+    mkdirSync(dirname(join(workspace, name)), { recursive: true });
+    writeFileSync(join(workspace, name), text);
+  }
 
   const vscodeExecutablePath =
     process.env.VSCODE_EXECUTABLE ??

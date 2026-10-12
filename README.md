@@ -49,6 +49,7 @@ The query commands take an optional argument, so you can bind your own keys:
 - **Errors** appear as a squiggle at the exact place EasyCrypt reports, in the Problems panel, and in the response pane. Processing stops at the first error.
 - **Cursor.** After next and undo the cursor moves to the end of the processed region, like Proof General's default `proof-follow-mode`. Set `easycryptCompanion.followMode` to `ignore` to keep it still.
 - **Outline and folding.** The Outline view, the breadcrumbs and Go to Symbol in Editor list the lemmas, operators, modules and theories of the file. Proofs, theories, sections and modules can be folded. Both follow the text as you type and do not need EasyCrypt to run.
+- **Finding lemmas.** Go to Symbol in Workspace (`Cmd+T`, or `Ctrl+T` on Linux and Windows) finds any lemma, operator, type, module or theory by name, in your project and in EasyCrypt's library, without running EasyCrypt. The library is located with `easycrypt config`; copies of scripts under `_build` and `_opam` are left out.
 - **Weak-check mode** (`pragma Proofs:weak`, proofs are not checked) is toggled from the status bar item.
 - **One EasyCrypt process per file**, started with the file's folder as working directory, so `require` finds neighboring files and `easycrypt.project` is picked up.
 

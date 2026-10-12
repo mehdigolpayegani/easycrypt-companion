@@ -4,6 +4,8 @@ import { Panels, SCHEME } from "./panels";
 import { ProofSession } from "./session";
 import { followPosition } from "./sentences";
 import { registerOutline } from "./symbols";
+import { DeclarationIndex } from "./index";
+import { WorkspaceIndex } from "./workspaceIndex";
 
 /** A possibly qualified identifier: `addrC`, `Ring.IntID.addrC`, `x'`. */
 const IDENT_RE = /[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*/;
@@ -11,6 +13,9 @@ const IDENT_RE = /[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*/;
 /** Returned from activate() for tests. */
 export interface CompanionApi {
   currentSession(): ProofSession | undefined;
+  index: DeclarationIndex;
+  /** Resolves when the workspace and the library have been indexed. */
+  indexReady: Promise<void>;
 }
 
 export function activate(context: vscode.ExtensionContext): CompanionApi {
@@ -183,8 +188,14 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
   register("showLog", () => log.show());
 
   registerOutline(context, LANGUAGE);
+  const workspaceIndex = new WorkspaceIndex(log);
+  context.subscriptions.push(workspaceIndex);
   warnAboutConflicts(context);
-  return { currentSession: () => manager.currentSession() };
+  return {
+    currentSession: () => manager.currentSession(),
+    index: workspaceIndex.index,
+    indexReady: workspaceIndex.ready,
+  };
 }
 
 export function deactivate(): void {

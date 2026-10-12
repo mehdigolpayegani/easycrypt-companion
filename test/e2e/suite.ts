@@ -270,6 +270,43 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "Go to Symbol in Workspace finds lemmas of the project and of the library",
+    async () => {
+      await api.indexReady;
+      const find = async (query: string) =>
+        (await vscode.commands.executeCommand<vscode.SymbolInformation[]>("vscode.executeWorkspaceSymbolProvider", query)) ?? [];
+
+      const project = (await find("aa_ok")).find((s) => s.name === "aa_ok");
+      assert.ok(project, "aa_ok found");
+      assert.match(project.location.uri.fsPath, /Helper\.ec$/);
+      assert.equal(project.location.range.start.line, 1);
+      assert.equal(vscode.SymbolKind[project.kind], "Function");
+
+      assert.ok(
+        (await find("size_cat")).some((s) => s.name === "size_cat" && /List\.ec$/.test(s.location.uri.fsPath)),
+        "size_cat found in the library",
+      );
+      assert.ok(
+        (await find("l")).some((s) => s.name === "l" && s.containerName === "T"),
+        "a lemma inside a theory names its theory",
+      );
+      assert.deepEqual(await find("build_copy_lemma"), [], "copies in _build are left out");
+
+      // A file added to the project is picked up.
+      const { writeFileSync } = await import("node:fs");
+      writeFileSync(join(workspace(), "Fresh.ec"), "lemma fresh_lemma : true by [].\n");
+      await waitFor("new file indexed", async () => (await find("fresh_lemma")).length > 0, 15_000);
+
+      // So is typing in an open file, before it is saved.
+      const editor = await open("outline.ec");
+      const end = editor.document.positionAt(editor.document.getText().length);
+      await editor.edit((b) => b.insert(end, "lemma typed_now : true by [].\n"));
+      await waitFor("edit indexed", async () => (await find("typed_now")).length > 0, 15_000);
+      await vscode.commands.executeCommand("workbench.action.files.revert");
+      await waitFor("revert indexed", async () => (await find("typed_now")).length === 0, 15_000);
+    },
+  ],
+  [
     "VS Code registers the Proof General key chords",
     async () => {
       await vscode.commands.executeCommand("workbench.action.openDefaultKeybindingsFile");

@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { DeclarationKind, parseDeclarations } from "./declarations";
 import { foldingRanges, OutlineNode, outlineTree } from "./outline";
 
-const SYMBOL_KINDS: Record<DeclarationKind, vscode.SymbolKind> = {
+export const SYMBOL_KINDS: Record<DeclarationKind, vscode.SymbolKind> = {
   lemma: vscode.SymbolKind.Function,
   axiom: vscode.SymbolKind.Constant,
   op: vscode.SymbolKind.Operator,
