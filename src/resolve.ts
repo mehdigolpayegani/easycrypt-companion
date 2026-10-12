@@ -1,6 +1,7 @@
 // Finds the declarations a name in a script may refer to, by name only:
 // first in the same file, then in the files it requires, then anywhere.
 
+import { endsWith, membersOf, openedByClones } from "./clones";
 import { DeclarationIndex, IndexEntry, theoryOfFile } from "./index";
 
 const QUALIFIED = /[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*/g;
@@ -56,20 +57,19 @@ function requiredFiles(index: DeclarationIndex, file: string): Set<string> {
   return files;
 }
 
-function endsWith(path: string[], suffix: string[]): boolean {
-  return suffix.length <= path.length && suffix.every((part, i) => part === path[path.length - suffix.length + i]);
-}
-
 /**
- * What `name` (possibly qualified) may refer to when used in `file`. A
- * qualifier that matches nothing, such as the alias of a clone, is ignored.
+ * What `name` (possibly qualified) may refer to when used in `file`. Clones
+ * are followed to the theory they copy. A qualifier that still matches
+ * nothing is ignored.
  */
 export function resolve(index: DeclarationIndex, file: string | undefined, name: string): Resolution {
   const qualifier = name.split(".");
   const base = qualifier.pop()!;
+  const required = file === undefined ? new Set<string>() : requiredFiles(index, file);
   let candidates = index.named(base);
   if (qualifier.length > 0) {
-    const qualified = candidates.filter((e) => endsWith([theoryOfFile(e.file), ...e.path], qualifier));
+    let qualified = candidates.filter((e) => endsWith([theoryOfFile(e.file), ...e.path], qualifier));
+    if (qualified.length === 0) qualified = membersOf(index, { file: file ?? "", path: [] }, qualifier, base);
     if (qualified.length > 0) candidates = qualified;
   } else {
     // A file is a theory too: `List` is List.ec.
@@ -86,12 +86,17 @@ export function resolve(index: DeclarationIndex, file: string | undefined, name:
     candidates = [...candidates, ...files];
   }
 
-  const required = file === undefined ? new Set<string>() : requiredFiles(index, file);
   const resolution: Resolution = { sameFile: [], required: [], elsewhere: [] };
   for (const entry of candidates) {
     if (entry.file === file) resolution.sameFile.push(entry);
     else if (required.has(entry.file)) resolution.required.push(entry);
     else resolution.elsewhere.push(entry);
+  }
+  // Nothing nearby under that name: it may come from a clone, perhaps renamed.
+  if (file !== undefined && qualifier.length === 0 && resolution.sameFile.length + resolution.required.length === 0) {
+    const opened = new Set(openedByClones(index, file, required, base));
+    resolution.required = [...opened];
+    resolution.elsewhere = resolution.elsewhere.filter((e) => !opened.has(e));
   }
   return resolution;
 }

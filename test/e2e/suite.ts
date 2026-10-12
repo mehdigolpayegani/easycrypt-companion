@@ -341,7 +341,10 @@ const tests: Array<[string, () => Promise<void>]> = [
       };
 
       assert.deepEqual(await definitions("aa_ok"), ["Helper.ec:1"], "a lemma of a required file");
-      assert.deepEqual(await definitions("local_one."), ["nav.ec:5"], "a lemma of the same file");
+      assert.deepEqual(await definitions("local_one."), ["nav.ec:8"], "a lemma of the same file");
+      const lineOf = (name: string, file: RegExp) => api.index.named(name).find((e) => file.test(e.file))!.line;
+      assert.deepEqual(await definitions("addrC"), [`Ring.ec:${lineOf("addrC", /Ring\.ec$/)}`], "through clone include");
+      assert.deepEqual(await definitions("dbool_ll"), [`Distr.ec:${lineOf("dunifin_ll", /Distr\.ec$/)}`], "a renamed member");
       assert.deepEqual(await definitions("size_cat"), ["List.ec:" + api.index.named("size_cat").find((e) => /List\.ec$/.test(e.file))!.line]);
       assert.deepEqual(await definitions("List.size_cat"), ["List.ec:0"], "a theory that is a file");
 
@@ -350,6 +353,9 @@ const tests: Array<[string, () => Promise<void>]> = [
       assert.match(shown, /lemma aa_ok : aa = 3 by rewrite \/aa\./);
       assert.match(shown, /Helper\.ec/);
       assert.equal(doc.getText(hovers[0].range), "aa_ok");
+
+      const viaClone = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", doc.uri, at("dbool_ll"));
+      assert.match(viaClone.flatMap((h) => h.contents.map((c) => (typeof c === "string" ? c : c.value))).join("\n"), /lemma dunifin_ll/);
 
       const none = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", doc.uri, at("(s t"));
       assert.deepEqual(none, [], "a local variable shows nothing");

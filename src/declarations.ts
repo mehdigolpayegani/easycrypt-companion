@@ -34,6 +34,17 @@ export interface Declaration {
   end: number;
   /** For a clone: the theory it copies. */
   source?: string;
+  /** For a clone: its `rename` clauses, in order. */
+  renames?: Rename[];
+}
+
+/** `rename [type] "t" as "u"`: names matching `pattern` get `replacement`. */
+export interface Rename {
+  /** `type`, `op`, `lemma`, ...; empty for every kind. */
+  kinds: string[];
+  /** A regular expression. */
+  pattern: string;
+  replacement: string;
 }
 
 interface Token {
@@ -53,6 +64,7 @@ const STRING_NAME = /"[^"\n]*"/y;
 const TYPE_VARIABLE = /'[A-Za-z_][A-Za-z0-9_']*/y;
 const PARENTHESES = /\([^)]*\)/y;
 // `op n : { int | 0 < n } as gt0_n.` also declares the axiom `gt0_n`.
+const RENAME = /(?:\[([^\]]*)\]\s*)?"([^"]*)"\s+as\s+"([^"]*)"/g;
 const AS_AXIOM = /\}\s*as\s+([A-Za-z_][A-Za-z0-9_']*)\s*\.$/;
 
 const MODIFIERS = new Set(["local", "declare", "abstract", "global"]);
@@ -280,7 +292,13 @@ export function parseDeclarations(text: string): Declaration[] {
       const last = source.text.slice(source.text.lastIndexOf(".") + 1);
       const alias = r.accept("as") ? r.word() : undefined;
       const name = alias ?? { text: last, start: source.end - last.length, end: source.end };
-      add("clone", name, label(), s, source.text);
+      const clone = add("clone", name, label(), s, source.text);
+      const renames = [...text.slice(source.end, s.end).matchAll(RENAME)];
+      clone.renames = renames.map((m) => ({
+        kinds: (m[1] ?? "").split(",").map((k) => k.trim().replace(/\s+/g, " ")).filter(Boolean),
+        pattern: m[2],
+        replacement: m[3],
+      }));
     }
   };
 

@@ -1,7 +1,7 @@
 // The declarations of many files, searchable by name. Independent of VS Code.
 
 import { basename } from "node:path";
-import { DeclarationKind, parseDeclarations, requiredTheories } from "./declarations";
+import { DeclarationKind, parseDeclarations, Rename, requiredTheories } from "./declarations";
 
 export interface IndexEntry {
   file: string;
@@ -15,10 +15,22 @@ export interface IndexEntry {
   endColumn: number;
   /** The declaring sentence, cut short if long. */
   signature: string;
+  clone?: CloneInfo;
+}
+
+export interface CloneInfo {
+  /** The theory copied, as written: `Ring.ComRing`. */
+  source: string;
+  /** `clone include`: the copy becomes part of the enclosing theory. */
+  include: boolean;
+  import: boolean;
+  export: boolean;
+  renames: Rename[];
 }
 
 interface FileEntries {
   entries: IndexEntry[];
+  clones: IndexEntry[];
   requires: string[];
 }
 
@@ -70,7 +82,7 @@ export class DeclarationIndex {
       while (line + 1 < lineStarts.length && lineStarts[line + 1] <= d.nameStart) line++;
       const column = d.nameStart - lineStarts[line];
       const indent = d.start - (text.lastIndexOf("\n", d.start - 1) + 1);
-      entries.push({
+      const entry: IndexEntry = {
         file,
         kind: d.kind,
         name: d.name,
@@ -79,9 +91,21 @@ export class DeclarationIndex {
         column,
         endColumn: column + (d.nameEnd - d.nameStart),
         signature: signatureOf(text.slice(d.start, d.signatureEnd), indent),
-      });
+      };
+      if (d.kind === "clone" && d.source !== undefined) {
+        const flags = d.keyword.split(" ");
+        entry.clone = {
+          source: d.source,
+          include: flags.includes("include"),
+          import: flags.includes("import"),
+          export: flags.includes("export"),
+          renames: d.renames ?? [],
+        };
+      }
+      entries.push(entry);
     }
-    this.byFile.set(file, { entries, requires: requiredTheories(text) });
+    const clones = entries.filter((e) => e.clone !== undefined);
+    this.byFile.set(file, { entries, clones, requires: requiredTheories(text) });
     this.byName = this.byTheory = undefined;
   }
 
@@ -128,6 +152,11 @@ export class DeclarationIndex {
       }
     }
     return this.byTheory.get(name) ?? [];
+  }
+
+  /** The clones declared in `file`. */
+  clonesOf(file: string): IndexEntry[] {
+    return this.byFile.get(file)?.clones ?? [];
   }
 
   /** The theories `file` loads with `require`. */

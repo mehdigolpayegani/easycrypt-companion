@@ -33,7 +33,10 @@ qed.
 end T.
 `,
   "_build/Copy.ec": "lemma build_copy_lemma : true by [].\n",
-  "nav.ec": `require import AllCore List Helper.
+  "nav.ec": `require import AllCore List Distr DBool Ring Helper.
+
+lemma viaclone (x y : int) : x + y = y + x by rewrite IntID.addrC.
+lemma renamed : is_lossless dbool by exact: dbool_ll.
 
 lemma uses : aa = 3.
 proof. by rewrite aa_ok. qed.

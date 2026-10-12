@@ -182,6 +182,20 @@ clone MFinite.
   );
 });
 
+test("clones record their renames", () => {
+  const text = `clone include Distr.MFinite with type t <- bool
+  rename "dunifinE" as "dboolE_count"
+  rename [type] "t" as "u" [module type, op] "x" as "y".
+clone Ring as R.`;
+  const [first, second] = parseDeclarations(text);
+  assert.deepEqual(first.renames, [
+    { kinds: [], pattern: "dunifinE", replacement: "dboolE_count" },
+    { kinds: ["type"], pattern: "t", replacement: "u" },
+    { kinds: ["module type", "op"], pattern: "x", replacement: "y" },
+  ]);
+  assert.deepEqual(second.renames, []);
+});
+
 test("name offsets point at the name, even after comments", () => {
   const text = "(* intro *)\nlemma (* why *) addrC (x y : int) : x + y = y + x by smt().";
   const d = find(text, "addrC");

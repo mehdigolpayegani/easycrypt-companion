@@ -6,7 +6,7 @@
 - Folding of proofs, theories, sections, modules and comments (`C-c v`).
 - Go to Symbol in Workspace over the project and EasyCrypt's library.
 - Library files open read-only, with a link to allow editing.
-- Go to Definition and hover for declared names.
+- Go to Definition and hover for declared names, following clones and their renames.
 - The goals and response panes are locked, so other files do not open over them.
 
 ## 0.1.0

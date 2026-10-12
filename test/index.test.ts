@@ -102,3 +102,18 @@ test("the number of results is limited", () => {
   assert.equal(i.search("l", 10).length, 10);
   assert.equal(i.search("l").length, 50);
 });
+
+test("clones keep what they copy and how", () => {
+  const i = new DeclarationIndex();
+  i.update("/a.ec", 'clone import Ring.ComRing as CR.\nclone include M rename "a" as "b".\nlocal clone export B.\nop x : int.');
+  assert.deepEqual(
+    i.clonesOf("/a.ec").map((e) => [e.name, e.clone]),
+    [
+      ["CR", { source: "Ring.ComRing", include: false, import: true, export: false, renames: [] }],
+      ["M", { source: "M", include: true, import: false, export: false, renames: [{ kinds: [], pattern: "a", replacement: "b" }] }],
+      ["B", { source: "B", include: false, import: false, export: true, renames: [] }],
+    ],
+  );
+  assert.equal(i.named("x")[0].clone, undefined);
+  assert.deepEqual(i.clonesOf("/missing.ec"), []);
+});
