@@ -307,6 +307,38 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "library files open read-only until editing is allowed",
+    async () => {
+      await api.indexReady;
+      const entry = api.index.search("size_cat").find((e) => /List\.ec$/.test(e.file));
+      assert.ok(entry, "List.ec is indexed");
+      const doc = await vscode.workspace.openTextDocument(entry.file);
+      const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+      const lenses = () => vscode.commands.executeCommand<vscode.CodeLens[]>("vscode.executeCodeLensProvider", doc.uri);
+      /** Tries to insert a character; true if the text changed. */
+      const type = async () => {
+        const before = doc.getText();
+        await editor.edit((b) => b.insert(new vscode.Position(0, 0), " "));
+        await new Promise((r) => setTimeout(r, 150));
+        return doc.getText() !== before;
+      };
+
+      const [lens] = await waitFor("the read-only notice", async () => {
+        const found = await lenses();
+        return found.length > 0 && found;
+      });
+      assert.match(lens.command!.title, /read-only/);
+      assert.equal(await type(), false, "typing is refused");
+      assert.equal(doc.isDirty, false);
+
+      await vscode.commands.executeCommand(lens.command!.command, ...(lens.command!.arguments ?? []));
+      await waitFor("editing to be allowed", type, 10_000);
+      assert.deepEqual(await lenses(), [], "the notice is gone");
+      await vscode.commands.executeCommand("workbench.action.files.revert");
+      assert.equal(doc.isDirty, false);
+    },
+  ],
+  [
     "VS Code registers the Proof General key chords",
     async () => {
       await vscode.commands.executeCommand("workbench.action.openDefaultKeybindingsFile");

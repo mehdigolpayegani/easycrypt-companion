@@ -5,6 +5,7 @@ import { ProofSession } from "./session";
 import { followPosition } from "./sentences";
 import { registerOutline } from "./symbols";
 import { DeclarationIndex } from "./index";
+import { LibraryGuard } from "./libraryGuard";
 import { WorkspaceIndex } from "./workspaceIndex";
 
 /** A possibly qualified identifier: `addrC`, `Ring.IntID.addrC`, `x'`. */
@@ -189,7 +190,12 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
 
   registerOutline(context, LANGUAGE);
   const workspaceIndex = new WorkspaceIndex(log);
-  context.subscriptions.push(workspaceIndex);
+  const guard = new LibraryGuard(LANGUAGE, (path) => workspaceIndex.isLibraryFile(path));
+  context.subscriptions.push(
+    workspaceIndex,
+    guard,
+    workspaceIndex.onDidScanLibrary(() => void guard.refresh()),
+  );
   warnAboutConflicts(context);
   return {
     currentSession: () => manager.currentSession(),

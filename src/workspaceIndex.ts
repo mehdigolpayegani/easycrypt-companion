@@ -32,7 +32,10 @@ export class WorkspaceIndex implements vscode.Disposable {
   readonly index = new DeclarationIndex();
   /** Resolves when the workspace and the library have been read once. */
   readonly ready: Promise<void>;
-  private libraryFiles: string[] = [];
+  private libraryFiles = new Set<string>();
+  private readonly libraryScanned = new vscode.EventEmitter<void>();
+  /** Fires when the set of library files may have changed. */
+  readonly onDidScanLibrary = this.libraryScanned.event;
   /** Folders of scripts opened from outside the workspace. */
   private readonly outsideFolders = new Set<string>();
   private readonly pendingEdits = new Map<string, NodeJS.Timeout>();
@@ -78,9 +81,14 @@ export class WorkspaceIndex implements vscode.Disposable {
     const files = (await Promise.all(dirs.map(scriptsIn))).flat();
     const kept = new Set(files);
     for (const old of this.libraryFiles) if (!kept.has(old)) this.index.remove(old);
-    this.libraryFiles = files;
+    this.libraryFiles = kept;
+    this.libraryScanned.fire();
     await this.readAll(files);
     this.log.appendLine(`Indexed ${this.index.size} declarations (${files.length} library files).`);
+  }
+
+  isLibraryFile(path: string): boolean {
+    return this.libraryFiles.has(path);
   }
 
   private async readAll(paths: string[]): Promise<void> {
@@ -147,6 +155,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 
   dispose(): void {
     for (const timer of this.pendingEdits.values()) clearTimeout(timer);
+    this.libraryScanned.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }
