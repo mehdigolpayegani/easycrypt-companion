@@ -33,6 +33,15 @@ qed.
 end T.
 `,
   "_build/Copy.ec": "lemma build_copy_lemma : true by [].\n",
+  "nav.ec": `require import AllCore List Helper.
+
+lemma uses : aa = 3.
+proof. by rewrite aa_ok. qed.
+
+lemma local_one : true by [].
+lemma again : true by apply: local_one.
+lemma lib (s t : int list) : size (s ++ t) = size s + size t by rewrite List.size_cat.
+`,
   "slow.ec": `require import AllCore.
 lemma slow (x y z : int) : (x + y) * (x - y) * z * z * z = x*x*z*z*z - y*y*z*z*z + 1.
 proof.

@@ -309,6 +309,19 @@ export function parseDeclarations(text: string): Declaration[] {
   return declarations;
 }
 
+/** The theories a script loads with `require`, e.g. `AllCore` and `List`. */
+export function requiredTheories(text: string): string[] {
+  const names = new Set<string>();
+  for (let s = nextSentence(text, 0); s; s = nextSentence(text, s.end)) {
+    const r = new Reader(text, s.contentStart, s.end);
+    if (r.accept("from")) r.word(); // `from Jasmin require import JModel.`
+    if (!r.accept("require")) continue;
+    if (!r.accept("import")) r.accept("export");
+    for (let name = r.word(); name; name = r.word()) names.add(name.text);
+  }
+  return [...names];
+}
+
 /** `Ring.addrC` for the lemma `addrC` declared in the theory `Ring`. */
 export function qualifiedName(d: Declaration): string {
   return [...d.path, d.name].join(".");

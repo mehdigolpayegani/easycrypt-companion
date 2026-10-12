@@ -1,6 +1,7 @@
 // The declarations of many files, searchable by name. Independent of VS Code.
 
-import { DeclarationKind, parseDeclarations } from "./declarations";
+import { basename } from "node:path";
+import { DeclarationKind, parseDeclarations, requiredTheories } from "./declarations";
 
 export interface IndexEntry {
   file: string;
@@ -12,6 +13,30 @@ export interface IndexEntry {
   line: number;
   column: number;
   endColumn: number;
+  /** The declaring sentence, cut short if long. */
+  signature: string;
+}
+
+interface FileEntries {
+  entries: IndexEntry[];
+  requires: string[];
+}
+
+const MAX_SIGNATURE_LINES = 12;
+const MAX_SIGNATURE_LENGTH = 1200;
+
+/** `List` for `/lib/List.ec`: a file is a theory named after it. */
+export function theoryOfFile(file: string): string {
+  return basename(file).replace(/\.eca?$/, "");
+}
+
+/** `text` without the indentation of its first line, cut to a few lines. */
+function signatureOf(text: string, indent: number): string {
+  const indentation = new RegExp(`^[ \\t]{0,${indent}}`);
+  const lines = text.split("\n").map((line, i) => (i === 0 ? line : line.replace(indentation, "")));
+  const kept = lines.slice(0, MAX_SIGNATURE_LINES).join("\n");
+  if (lines.length <= MAX_SIGNATURE_LINES && kept.length <= MAX_SIGNATURE_LENGTH) return kept;
+  return `${kept.slice(0, MAX_SIGNATURE_LENGTH)}\n\u2026`;
 }
 
 /**
@@ -28,7 +53,10 @@ function matchRank(query: string, name: string): number | undefined {
 }
 
 export class DeclarationIndex {
-  private readonly byFile = new Map<string, IndexEntry[]>();
+  private readonly byFile = new Map<string, FileEntries>();
+  /** Lookup tables, rebuilt on demand after a change. */
+  private byName?: Map<string, IndexEntry[]>;
+  private byTheory?: Map<string, string[]>;
 
   /** Replaces what is known about `file` with the declarations of `text`. */
   update(file: string, text: string): void {
@@ -41,6 +69,7 @@ export class DeclarationIndex {
       if (!d.name) continue; // an unnamed section
       while (line + 1 < lineStarts.length && lineStarts[line + 1] <= d.nameStart) line++;
       const column = d.nameStart - lineStarts[line];
+      const indent = d.start - (text.lastIndexOf("\n", d.start - 1) + 1);
       entries.push({
         file,
         kind: d.kind,
@@ -49,13 +78,16 @@ export class DeclarationIndex {
         line,
         column,
         endColumn: column + (d.nameEnd - d.nameStart),
+        signature: signatureOf(text.slice(d.start, d.signatureEnd), indent),
       });
     }
-    this.byFile.set(file, entries);
+    this.byFile.set(file, { entries, requires: requiredTheories(text) });
+    this.byName = this.byTheory = undefined;
   }
 
   remove(file: string): void {
     this.byFile.delete(file);
+    this.byName = this.byTheory = undefined;
   }
 
   has(file: string): boolean {
@@ -65,8 +97,42 @@ export class DeclarationIndex {
   /** Number of declarations. */
   get size(): number {
     let n = 0;
-    for (const entries of this.byFile.values()) n += entries.length;
+    for (const { entries } of this.byFile.values()) n += entries.length;
     return n;
+  }
+
+  /** Declarations called exactly `name`. */
+  named(name: string): IndexEntry[] {
+    if (!this.byName) {
+      this.byName = new Map();
+      for (const { entries } of this.byFile.values()) {
+        for (const entry of entries) {
+          const same = this.byName.get(entry.name);
+          if (same) same.push(entry);
+          else this.byName.set(entry.name, [entry]);
+        }
+      }
+    }
+    return this.byName.get(name) ?? [];
+  }
+
+  /** The files that are the theory `name`, e.g. `List.ec` for `List`. */
+  filesOfTheory(name: string): string[] {
+    if (!this.byTheory) {
+      this.byTheory = new Map();
+      for (const file of this.byFile.keys()) {
+        const theory = theoryOfFile(file);
+        const same = this.byTheory.get(theory);
+        if (same) same.push(file);
+        else this.byTheory.set(theory, [file]);
+      }
+    }
+    return this.byTheory.get(name) ?? [];
+  }
+
+  /** The theories `file` loads with `require`. */
+  requiresOf(file: string): string[] {
+    return this.byFile.get(file)?.requires ?? [];
   }
 
   /** Declarations whose name matches `query`, best matches first. Case is ignored. */
@@ -74,7 +140,7 @@ export class DeclarationIndex {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const found: Array<{ entry: IndexEntry; rank: number }> = [];
-    for (const entries of this.byFile.values()) {
+    for (const { entries } of this.byFile.values()) {
       for (const entry of entries) {
         const rank = matchRank(q, entry.name.toLowerCase());
         if (rank !== undefined) found.push({ entry, rank });

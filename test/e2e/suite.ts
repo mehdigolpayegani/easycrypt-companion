@@ -307,6 +307,35 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "go to definition and hover find declarations by name",
+    async () => {
+      await api.indexReady;
+      const editor = await open("nav.ec");
+      const doc = editor.document;
+      const text = doc.getText();
+      /** The position inside the last occurrence of `word`. */
+      const at = (word: string) => doc.positionAt(text.lastIndexOf(word) + 1);
+      const definitions = async (word: string) => {
+        const found = await vscode.commands.executeCommand<vscode.Location[]>("vscode.executeDefinitionProvider", doc.uri, at(word));
+        return found.map((l) => `${l.uri.fsPath.split("/").pop()}:${l.range.start.line}`);
+      };
+
+      assert.deepEqual(await definitions("aa_ok"), ["Helper.ec:1"], "a lemma of a required file");
+      assert.deepEqual(await definitions("local_one."), ["nav.ec:5"], "a lemma of the same file");
+      assert.deepEqual(await definitions("size_cat"), ["List.ec:" + api.index.named("size_cat").find((e) => /List\.ec$/.test(e.file))!.line]);
+      assert.deepEqual(await definitions("List.size_cat"), ["List.ec:0"], "a theory that is a file");
+
+      const hovers = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", doc.uri, at("aa_ok"));
+      const shown = hovers.flatMap((h) => h.contents.map((c) => (typeof c === "string" ? c : c.value))).join("\n");
+      assert.match(shown, /lemma aa_ok : aa = 3 by rewrite \/aa\./);
+      assert.match(shown, /Helper\.ec/);
+      assert.equal(doc.getText(hovers[0].range), "aa_ok");
+
+      const none = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", doc.uri, at("(s t"));
+      assert.deepEqual(none, [], "a local variable shows nothing");
+    },
+  ],
+  [
     "library files open read-only until editing is allowed",
     async () => {
       await api.indexReady;

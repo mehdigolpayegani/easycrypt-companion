@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { Declaration, parseDeclarations, qualifiedName } from "../src/declarations";
+import { Declaration, parseDeclarations, qualifiedName, requiredTheories } from "../src/declarations";
 
 /** `kind qualified-name` for every declaration. */
 function summary(text: string): string[] {
@@ -199,4 +199,19 @@ test("unfinished text does not fail", () => {
   assert.deepEqual(summary(""), []);
   assert.deepEqual(summary("lemma"), []);
   assert.deepEqual(summary("lemma ."), []);
+});
+
+test("lists the theories a script requires", () => {
+  const text = `
+require import AllCore List.
+require (*--*) Distr.
+require export Ring.
+from Jasmin require import JModel.
+(* require Hidden. *)
+lemma l : true.
+proof. qed.
+require import List.
+`;
+  assert.deepEqual(requiredTheories(text), ["AllCore", "List", "Distr", "Ring", "JModel"]);
+  assert.deepEqual(requiredTheories("lemma l : true by []."), []);
 });

@@ -29,7 +29,39 @@ test("finds declarations by name, with where they are", () => {
     line: 2,
     column: 8,
     endColumn: 13,
+    signature: "lemma addrC (x y : int) : x + y = y + x by smt().",
   });
+});
+
+test("keeps each declaration's text, dedented and cut short", () => {
+  const i = new DeclarationIndex();
+  const body = Array.from({ length: 30 }, (_, n) => `    proc p${n}() = {}`).join("\n");
+  i.update("/a.ec", `theory T.\n  op f (x : int) =\n    x + 1.\n  module M = {\n${body}\n  }.\nend T.`);
+  assert.equal(i.named("f")[0].signature, "op f (x : int) =\n  x + 1.");
+  const lines = i.named("M")[0].signature.split("\n");
+  assert.equal(lines.length, 13);
+  assert.equal(lines[1], "  proc p0() = {}");
+  assert.equal(lines[12], "\u2026");
+});
+
+test("looks names up exactly, and knows theories and requires", () => {
+  const i = index();
+  i.update("/proj/Mine.eca", "require import AllCore Ring.\nrequire List.\nlemma size : true by [].");
+  assert.deepEqual(
+    i.named("size").map((e) => e.file),
+    ["/lib/List.ec", "/proj/Mine.eca"],
+  );
+  assert.deepEqual(i.named("siz"), []);
+  assert.deepEqual(i.requiresOf("/proj/Mine.eca"), ["AllCore", "Ring", "List"]);
+  assert.deepEqual(i.requiresOf("/unknown.ec"), []);
+  assert.deepEqual(i.filesOfTheory("Mine"), ["/proj/Mine.eca"]);
+  assert.deepEqual(i.filesOfTheory("List"), ["/lib/List.ec"]);
+  i.remove("/proj/Mine.eca");
+  assert.deepEqual(i.filesOfTheory("Mine"), []);
+  assert.deepEqual(
+    i.named("size").map((e) => e.file),
+    ["/lib/List.ec"],
+  );
 });
 
 test("ranks exact matches, then prefixes, substrings and letters in order", () => {
