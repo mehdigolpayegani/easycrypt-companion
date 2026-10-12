@@ -99,6 +99,26 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "files opened from a pane do not cover it",
+    async () => {
+      const script = await open("proof.ec");
+      await exec("next");
+      await idle();
+      const goals = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === GOALS_URI.toString());
+      assert.ok(goals, "goals pane visible");
+      // Put the focus in the goals pane, then open a file as a user would.
+      await vscode.window.showTextDocument(goals.document, { viewColumn: goals.viewColumn });
+      const helper = await vscode.workspace.openTextDocument(join(workspace(), "Helper.ec"));
+      const opened = await vscode.window.showTextDocument(helper);
+      assert.equal(opened.viewColumn, vscode.ViewColumn.One, "the file opened on the script's side");
+      assert.ok(
+        vscode.window.visibleTextEditors.some((e) => e.document.uri.toString() === GOALS_URI.toString()),
+        "the goals pane is still visible",
+      );
+      await vscode.window.showTextDocument(script.document, vscode.ViewColumn.One);
+    },
+  ],
+  [
     "Process to Cursor goes forward and back",
     async () => {
       const editor = await open("proof.ec");

@@ -76,6 +76,7 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
     if (goals) {
       await showOutput(GOALS_URI, layout === "threePane" ? vscode.ViewColumn.Two : vscode.ViewColumn.Beside);
     }
+    await lockPanes();
   }
 
   dispose(): void {
@@ -85,6 +86,19 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
 
 function isVisible(uri: vscode.Uri): boolean {
   return vscode.window.visibleTextEditors.some((e) => e.document.uri.toString() === uri.toString());
+}
+
+/** Locks the groups of the panes, so that files opened from a pane go to the script's side. */
+async function lockPanes(): Promise<void> {
+  const active = vscode.window.activeTextEditor;
+  for (const uri of [GOALS_URI, RESPONSE_URI]) {
+    const pane = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === uri.toString());
+    if (!pane) continue;
+    // The lock command applies to the focused group.
+    await vscode.window.showTextDocument(pane.document, { viewColumn: pane.viewColumn });
+    await vscode.commands.executeCommand("workbench.action.lockEditorGroup");
+  }
+  if (active) await vscode.window.showTextDocument(active.document, { viewColumn: active.viewColumn });
 }
 
 async function showOutput(uri: vscode.Uri, viewColumn: vscode.ViewColumn): Promise<void> {
