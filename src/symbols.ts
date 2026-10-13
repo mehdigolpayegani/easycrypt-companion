@@ -20,6 +20,22 @@ export const SYMBOL_KINDS: Record<DeclarationKind, vscode.SymbolKind> = {
   clone: vscode.SymbolKind.Namespace,
 };
 
+export const COMPLETION_KINDS: Record<DeclarationKind, vscode.CompletionItemKind> = {
+  lemma: vscode.CompletionItemKind.Function,
+  axiom: vscode.CompletionItemKind.Constant,
+  op: vscode.CompletionItemKind.Operator,
+  abbrev: vscode.CompletionItemKind.Operator,
+  pred: vscode.CompletionItemKind.Value,
+  type: vscode.CompletionItemKind.Struct,
+  module: vscode.CompletionItemKind.Class,
+  "module type": vscode.CompletionItemKind.Interface,
+  var: vscode.CompletionItemKind.Variable,
+  proc: vscode.CompletionItemKind.Method,
+  theory: vscode.CompletionItemKind.Module,
+  section: vscode.CompletionItemKind.Module,
+  clone: vscode.CompletionItemKind.Module,
+};
+
 function toSymbol(doc: vscode.TextDocument, node: OutlineNode): vscode.DocumentSymbol {
   const d = node.declaration;
   const symbol = new vscode.DocumentSymbol(

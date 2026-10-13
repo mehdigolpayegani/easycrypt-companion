@@ -22,7 +22,7 @@ export interface NameAt {
 }
 
 /** `G.` if the name at `start` follows the applied module `G(A, B).`, else nothing. */
-function appliedModule(line: string, start: number): string {
+export function appliedModule(line: string, start: number): string {
   let prefix = "";
   while (line[start - 1] === "." && line[start - 2] === ")") {
     let open = start - 2;
@@ -63,7 +63,7 @@ export interface Resolution {
 }
 
 /** The files `file` loads: the prelude and what it requires, directly or through other files. */
-function requiredFiles(index: DeclarationIndex, file: string): Set<string> {
+export function requiredFiles(index: DeclarationIndex, file: string): Set<string> {
   const files = new Set<string>();
   const theories = new Set<string>();
   const queue = [...PRELUDE, ...index.requiresOf(file)];
@@ -77,6 +77,11 @@ function requiredFiles(index: DeclarationIndex, file: string): Set<string> {
     }
   }
   return files;
+}
+
+/** Whether `e` can be named without a qualifier at `line` of `file`: a `var` or `proc` only inside its module. */
+export function inScope(e: IndexEntry, file: string | undefined, line: number | undefined): boolean {
+  return !e.scope || (e.file === file && line !== undefined && e.scope.start <= line && line <= e.scope.end);
 }
 
 /**
@@ -97,10 +102,7 @@ export function resolve(index: DeclarationIndex, file: string | undefined, name:
     for (let q = qualifier.slice(1); q.length > 0 && qualified.length === 0; q = q.slice(1)) qualified = within(q);
     if (qualified.length > 0) candidates = qualified;
   } else {
-    // A `var` or `proc` is named without its module only inside that module.
-    candidates = candidates.filter(
-      (e) => !e.scope || (e.file === file && line !== undefined && e.scope.start <= line && line <= e.scope.end),
-    );
+    candidates = candidates.filter((e) => inScope(e, file, line));
     // A file is a theory too: `List` is List.ec.
     const files = index.filesOfTheory(base).map((path): IndexEntry => ({
       file: path,

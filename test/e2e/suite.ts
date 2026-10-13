@@ -373,6 +373,59 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "completion suggests declared names and says which need a require",
+    async () => {
+      await api.indexReady;
+      /** What is suggested after typing `typed` at the end of `file`, by name. */
+      const complete = async (file: string, typed: string) => {
+        const editor = await open(file);
+        const doc = editor.document;
+        await editor.edit((b) => b.insert(doc.positionAt(doc.getText().length), typed));
+        const end = doc.positionAt(doc.getText().length);
+        const list = await vscode.commands.executeCommand<vscode.CompletionList>("vscode.executeCompletionItemProvider", doc.uri, end);
+        await vscode.commands.executeCommand("workbench.action.files.revert");
+        const label = (item: vscode.CompletionItem) => (typeof item.label === "string" ? { label: item.label } : item.label);
+        return new Map(list.items.map((item) => [label(item).label, { item, note: label(item).description }]));
+      };
+
+      const inNav = await complete("nav.ec", "\nlemma c : true by rewrite size_ca");
+      const sizeCat = inNav.get("size_cat");
+      assert.ok(sizeCat, "a lemma of a required file");
+      assert.equal(sizeCat.note, "List.ec");
+      assert.equal(sizeCat.item.kind, vscode.CompletionItemKind.Function);
+      assert.match((sizeCat.item.documentation as vscode.MarkdownString).value, /lemma size_cat/);
+      assert.equal((await complete("nav.ec", "\nlemma c : true by apply: local_o")).get("local_one")?.note, "nav.ec");
+
+      const far = await complete("outline.ec", "\nlemma c : true by rewrite aa_");
+      assert.equal(far.get("aa_ok")?.note, "needs require Helper");
+      const members = await complete("outline.ec", "\nlemma c : true by rewrite T.");
+      assert.deepEqual([...members.keys()].sort(), ["l", "x"], "the members of a theory");
+      const procs = await complete("game.ec", "\nlemma c : islossless G(A).ma");
+      assert.equal(procs.get("main")?.item.kind, vscode.CompletionItemKind.Method);
+
+      // Words of the scripts: with our names, and from VS Code itself for a single letter.
+      const words = await complete("outline.ec", "\nlemma c : true by tri");
+      assert.equal(words.get("trivial")?.item.kind, vscode.CompletionItemKind.Text);
+      assert.ok((await complete("outline.ec", "\nlemma c : true by tru")).has("true"), "a name of the prelude");
+      const short = await complete("outline.ec", "\nlemma c : true by tr");
+      assert.ok(short.has("trivial"));
+      const notes = [...short.values()].map((v) => v.note);
+      assert.ok(notes.every((note) => note === undefined || note === "outline.ec"), "two letters: no names of other files");
+      assert.ok((await complete("outline.ec", "\nlemma c : true by t")).has("trivial"), "VS Code's own words");
+
+      // Turned off, only VS Code's words are left.
+      const config = vscode.workspace.getConfiguration("easycryptCompanion");
+      await config.update("completion", false, vscode.ConfigurationTarget.Global);
+      try {
+        const off = await complete("nav.ec", "\nlemma c : true by rewrite size_ca");
+        assert.ok(off.has("size_cat"), "a word of the script");
+        assert.ok([...off.values()].every((v) => v.note === undefined), "no declared names");
+      } finally {
+        await config.update("completion", undefined, vscode.ConfigurationTarget.Global);
+      }
+    },
+  ],
+  [
     "library files open read-only until editing is allowed",
     async () => {
       await api.indexReady;

@@ -417,6 +417,11 @@
           "default": true,
           "markdownDescription": "Open files of EasyCrypt's library read-only, with a link at the top to allow editing. Library files inside the workspace are never locked."
         },
+        "easycryptCompanion.completion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Suggest the names of lemmas, operators and other declarations while typing. When off, only VS Code's own word suggestions remain."
+        },
         "easycryptCompanion.trace": {
           "type": "boolean",
           "default": false,

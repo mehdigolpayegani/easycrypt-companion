@@ -162,6 +162,16 @@ export class DeclarationIndex {
     return this.byTheory.get(name) ?? [];
   }
 
+  /** The indexed files. */
+  files(): Iterable<string> {
+    return this.byFile.keys();
+  }
+
+  /** The declarations of `file`, in source order. */
+  declarationsOf(file: string): IndexEntry[] {
+    return this.byFile.get(file)?.entries ?? [];
+  }
+
   /** The clones declared in `file`. */
   clonesOf(file: string): IndexEntry[] {
     return this.byFile.get(file)?.clones ?? [];

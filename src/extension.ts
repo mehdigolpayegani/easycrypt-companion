@@ -6,7 +6,7 @@ import { followPosition } from "./sentences";
 import { registerOutline } from "./symbols";
 import { DeclarationIndex } from "./index";
 import { LibraryGuard } from "./libraryGuard";
-import { registerNavigation } from "./navigation";
+import { registerCompletion, registerNavigation } from "./navigation";
 import { WorkspaceIndex } from "./workspaceIndex";
 
 /** A possibly qualified identifier: `addrC`, `Ring.IntID.addrC`, `x'`. */
@@ -200,6 +200,7 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
   registerNavigation(context, workspaceIndex.index, [LANGUAGE, "easycrypt-output"], (doc) =>
     doc.uri.scheme === "file" ? doc.uri.fsPath : manager.scriptEditor()?.document.uri.fsPath,
   );
+  registerCompletion(context, workspaceIndex.index, LANGUAGE);
   warnAboutConflicts(context);
   return {
     currentSession: () => manager.currentSession(),

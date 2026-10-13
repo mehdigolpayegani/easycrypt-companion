@@ -1,9 +1,11 @@
-// Go to Definition and hover for the names declared in EasyCrypt scripts.
+// Go to Definition, hover and completion for the names declared in EasyCrypt scripts.
 
 import { basename } from "node:path";
 import * as vscode from "vscode";
+import { Suggestion, suggest, typedName } from "./completion";
 import { DeclarationIndex } from "./index";
 import { nameAt, nearest, resolve } from "./resolve";
+import { COMPLETION_KINDS } from "./symbols";
 
 const MAX_HOVERS = 3;
 
@@ -53,5 +55,53 @@ export function registerNavigation(
         return new vscode.Hover(text, new vscode.Range(position.line, result.at.start, position.line, result.at.end));
       },
     }),
+  );
+}
+
+type CompletionRange = { inserting: vscode.Range; replacing: vscode.Range };
+
+function completionItem(s: Suggestion, range: CompletionRange): vscode.CompletionItem {
+  const e = s.entry;
+  const item = e
+    ? new vscode.CompletionItem(
+        { label: s.name, description: s.needs ? `needs require ${s.needs}` : basename(e.file) },
+        COMPLETION_KINDS[e.kind],
+      )
+    : new vscode.CompletionItem(s.name, vscode.CompletionItemKind.Text);
+  if (e) item.detail = `${e.kind} ${[...e.path, e.name].join(".")} — ${basename(e.file)}`;
+  if (e?.signature) item.documentation = new vscode.MarkdownString().appendCodeblock(e.signature, "easycrypt");
+  // Among equally good matches, the nearest come first.
+  item.sortText = `${s.near}${s.name}`;
+  item.range = range;
+  return item;
+}
+
+/** Suggests declared names, and the words of the open scripts, while typing in a script. */
+export function registerCompletion(context: vscode.ExtensionContext, index: DeclarationIndex, language: string): void {
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      { language },
+      {
+        provideCompletionItems(doc, position) {
+          const enabled = vscode.workspace.getConfiguration("easycryptCompanion").get<boolean>("completion", true);
+          // With nothing from here, VS Code suggests the words of the scripts itself.
+          if (!enabled) return undefined;
+          const typed = typedName(doc.lineAt(position.line).text, position.character);
+          if (!typed) return undefined;
+          const file = doc.uri.scheme === "file" ? doc.uri.fsPath : undefined;
+          const scripts = vscode.workspace.textDocuments.filter((d) => d.languageId === language);
+          const texts = scripts.map((d) => d.getText());
+          const { items, complete } = suggest(index, file, position.line, typed, texts);
+          // Replacing also takes the rest of the name the cursor is in.
+          const start = new vscode.Position(position.line, typed.start);
+          const end = doc.getWordRangeAtPosition(position)?.end ?? position;
+          const range = { inserting: new vscode.Range(start, position), replacing: new vscode.Range(start, end) };
+          return new vscode.CompletionList(
+            items.map((s) => completionItem(s, range)),
+            !complete,
+          );
+        },
+      },
+    ),
   );
 }
