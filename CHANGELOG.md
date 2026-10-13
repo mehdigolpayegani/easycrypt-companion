@@ -9,6 +9,7 @@
 - Go to Definition and hover for declared names, following clones and their renames.
 - The goals and response panes are locked, so other files do not open over them.
 - The variables and procedures of modules are in the outline, in Go to Symbol and in Go to Definition: `G(A).main`, `M.x`.
+- Showing the panes no longer moves the focus through them. VS Code 1.92 or later is required.
 
 ## 0.1.0
 
