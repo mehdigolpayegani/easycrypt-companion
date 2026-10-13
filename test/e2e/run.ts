@@ -45,6 +45,24 @@ lemma local_one : true by [].
 lemma again : true by apply: local_one.
 lemma lib (s t : int list) : size (s ++ t) = size s + size t by rewrite List.size_cat.
 `,
+  "game.ec": `require import AllCore.
+
+module type Adv = {
+  proc guess() : bool
+}.
+
+module G (A : Adv) = {
+  var b : bool
+
+  proc main() : bool = {
+    b <@ A.guess();
+    return b;
+  }
+}.
+
+lemma main_ll (A <: Adv) : islossless A.guess => islossless G(A).main.
+proof. by move=> h; proc; call h. qed.
+`,
   "slow.ec": `require import AllCore.
 lemma slow (x y z : int) : (x + y) * (x - y) * z * z * z = x*x*z*z*z - y*y*z*z*z + 1.
 proof.

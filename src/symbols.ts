@@ -13,6 +13,8 @@ export const SYMBOL_KINDS: Record<DeclarationKind, vscode.SymbolKind> = {
   type: vscode.SymbolKind.Struct,
   module: vscode.SymbolKind.Module,
   "module type": vscode.SymbolKind.Interface,
+  var: vscode.SymbolKind.Variable,
+  proc: vscode.SymbolKind.Method,
   theory: vscode.SymbolKind.Namespace,
   section: vscode.SymbolKind.Package,
   clone: vscode.SymbolKind.Namespace,

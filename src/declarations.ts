@@ -12,6 +12,8 @@ export type DeclarationKind =
   | "type"
   | "module"
   | "module type"
+  | "var"
+  | "proc"
   | "theory"
   | "section"
   | "clone";
@@ -22,13 +24,13 @@ export interface Declaration {
   name: string;
   /** The keywords used, e.g. `local lemma`, `abstract theory`, `equiv`. */
   keyword: string;
-  /** Enclosing theories, outermost first. */
+  /** Enclosing theories, then modules for a `var` or `proc`, outermost first. */
   path: string[];
   nameStart: number;
   nameEnd: number;
-  /** Start of the declaring sentence. */
+  /** Start of the declaring sentence, or of the member of a module. */
   start: number;
-  /** End of the declaring sentence. */
+  /** End of the declaring sentence; for a `proc`, of what comes before its body. */
   signatureEnd: number;
   /** End of the whole declaration: after `qed.` for a lemma, after `end T.` for a theory. */
   end: number;
@@ -79,6 +81,10 @@ const TOP_LEVEL = new Set([
   ...["instance", "notation", "exception"],
 ]);
 const CLONE_FLAGS = new Set(["import", "export", "include"]);
+// What starts a member of a module.
+const MEMBERS = new Set(["var", "proc", "module", "include", "import"]);
+const OPENING = "{[(";
+const CLOSING = "}])";
 const SIMPLE_KINDS: Record<string, DeclarationKind> = {
   op: "op",
   const: "op",
@@ -162,12 +168,12 @@ class Reader {
   }
 }
 
-/** Whether `word` occurs in [from, end) outside comments and strings. */
-function hasWord(text: string, from: number, end: number, word: string): boolean {
+/** The words and other characters of [from, end), outside comments and strings. */
+function* tokensIn(text: string, from: number, end: number): Generator<Token> {
   let i = from;
   for (;;) {
     const next = skipBlanksAndComments(text, i);
-    if (next === undefined || next >= end) return false;
+    if (next === undefined || next >= end) return;
     i = next;
     if (text[i] === '"') {
       i++;
@@ -176,15 +182,105 @@ function hasWord(text: string, from: number, end: number, word: string): boolean
       continue;
     }
     IDENT.lastIndex = i;
-    const m = IDENT.exec(text);
-    if (!m) {
-      i++;
-    } else if (m[0] === word) {
-      return true;
-    } else {
-      i += m[0].length;
+    const word = IDENT.exec(text)?.[0] ?? text[i];
+    yield { text: word, start: i, end: i + word.length };
+    i += word.length;
+  }
+}
+
+/** Whether `word` occurs in [from, end) outside comments and strings. */
+function hasWord(text: string, from: number, end: number, word: string): boolean {
+  for (const token of tokensIn(text, from, end)) if (token.text === word) return true;
+  return false;
+}
+
+function isName(token: Token | undefined): token is Token {
+  return token !== undefined && /^[A-Za-z_]/.test(token.text);
+}
+
+/** Index of the `{` opening the body of the module whose header goes on at `from`, if it has one. */
+function bodyStart(tokens: Token[], from: number): number | undefined {
+  let depth = 0;
+  let defined = false; // past the `=`
+  for (let i = from; i < tokens.length; i++) {
+    const t = tokens[i].text;
+    if (depth === 0 && MEMBERS.has(t)) return undefined;
+    if (depth === 0 && defined && t === "{") return i;
+    if (OPENING.includes(t)) depth++;
+    else if (CLOSING.includes(t) && --depth < 0) return undefined;
+    else if (depth === 0 && t === "=") defined = true;
+  }
+  return undefined;
+}
+
+/**
+ * Adds to `found` the `var`s, `proc`s and modules of the module body opening
+ * at `tokens[open]`. Returns the index of its closing brace.
+ */
+function readMembers(tokens: Token[], open: number, path: string[], found: Declaration[]): number {
+  /** The declarations of the member being read: several for `var x, y`. */
+  let member: Declaration[] = [];
+  let depth = 0;
+  let i = open;
+
+  const declare = (kind: DeclarationKind, name: Token, keyword: Token) => {
+    const { start } = keyword;
+    const names = { name: name.text, keyword: keyword.text, path, nameStart: name.start, nameEnd: name.end };
+    // The ends are set once the member has been read.
+    const declaration = { kind, ...names, start, signatureEnd: start, end: start };
+    member.push(declaration);
+    found.push(declaration);
+  };
+  const finish = () => {
+    const end = tokens[i - 1].end;
+    for (const d of member) {
+      d.end = end;
+      if (d.signatureEnd === d.start) d.signatureEnd = end;
+    }
+    member = [];
+  };
+
+  for (; i < tokens.length; i++) {
+    const t = tokens[i];
+    const next = tokens[i + 1];
+    if (OPENING.includes(t.text)) {
+      depth++;
+    } else if (CLOSING.includes(t.text)) {
+      if (--depth === 0) break;
+    } else if (depth === 1 && t.text === "=" && next?.text === "{" && member[0]?.kind === "proc") {
+      member[0].signatureEnd = tokens[i - 1].end; // the body follows
+    } else if (depth === 1 && MEMBERS.has(t.text)) {
+      finish();
+      if (t.text === "include" || t.text === "import") {
+        if (next?.text === "var") i++; // `import var M`: the variables of `M`
+      } else if (t.text === "var") {
+        // `var x, y : int`
+        for (let n = i + 1; isName(tokens[n]); n += 2) {
+          declare("var", tokens[n], t);
+          if (tokens[n + 1]?.text !== ",") break;
+        }
+      } else if (isName(next) && t.text === "proc") {
+        declare("proc", next, t);
+        // `proc f [...]` changes `f` in `M with { ... }`.
+        if (tokens[i + 2]?.text === "[") member[0].signatureEnd = next.end;
+      } else if (isName(next)) {
+        declare("module", next, t);
+        const inner = bodyStart(tokens, i + 2);
+        if (inner !== undefined) i = readMembers(tokens, inner, [...path, next.text], found);
+      }
     }
   }
+  finish();
+  return i;
+}
+
+/** The members of the module whose header goes on at `from`: `path` is its own qualified name. */
+function moduleMembers(text: string, from: number, end: number, path: string[]): Declaration[] {
+  const tokens = [...tokensIn(text, from, end)];
+  const found: Declaration[] = [];
+  const open = bodyStart(tokens, 0);
+  if (open !== undefined) readMembers(tokens, open, path, found);
+  return found;
 }
 
 export function parseDeclarations(text: string): Declaration[] {
@@ -271,9 +367,12 @@ export function parseDeclarations(text: string): Declaration[] {
     } else if (keyword.text === "module") {
       const isType = r.accept("type");
       if (isType) words.push("type");
-      r.match(/\(/y); // `module (M : T) (A : X) = ...`
+      const paren = r.match(/\(/y); // `module (M : T) (A : X) = ...`
       const name = r.word();
-      if (name) add(isType ? "module type" : "module", name, label(), s);
+      if (!name) return;
+      const { path } = add(isType ? "module type" : "module", name, label(), s);
+      const header = paren?.start ?? name.end;
+      declarations.push(...moduleMembers(text, header, s.end, [...path, name.text]));
     } else if (keyword.text === "theory") {
       const name = r.word();
       if (name) scopes.push(add("theory", name, label(), s));

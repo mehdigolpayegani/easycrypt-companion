@@ -117,3 +117,16 @@ test("clones keep what they copy and how", () => {
   assert.equal(i.named("x")[0].clone, undefined);
   assert.deepEqual(i.clonesOf("/missing.ec"), []);
 });
+
+test("a module member knows the lines of its module", () => {
+  const i = new DeclarationIndex();
+  i.update("/a.ec", "op x : int.\nmodule M = {\n  var x : int\n  proc f() : int = {\n    return x;\n  }\n}.\n");
+  const [op, variable] = i.named("x");
+  assert.equal(op.scope, undefined);
+  assert.deepEqual(
+    [variable.kind, variable.path, variable.line, variable.signature, variable.scope],
+    ["var", ["M"], 2, "var x : int", { start: 1, end: 6 }],
+  );
+  assert.equal(i.named("f")[0].signature, "proc f() : int");
+  assert.equal(i.named("M")[0].scope, undefined);
+});

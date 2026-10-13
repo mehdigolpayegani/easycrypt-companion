@@ -1,13 +1,14 @@
 // The declarations of many files, searchable by name. Independent of VS Code.
 
 import { basename } from "node:path";
-import { DeclarationKind, parseDeclarations, Rename, requiredTheories } from "./declarations";
+import { Declaration, DeclarationKind, parseDeclarations, Rename, requiredTheories } from "./declarations";
+import { lineAt, lineStartsOf } from "./sentences";
 
 export interface IndexEntry {
   file: string;
   kind: DeclarationKind;
   name: string;
-  /** Enclosing theories, outermost first. */
+  /** Enclosing theories, then modules for a `var` or `proc`, outermost first. */
   path: string[];
   /** Position of the name, 0-based. */
   line: number;
@@ -16,6 +17,8 @@ export interface IndexEntry {
   /** The declaring sentence, cut short if long. */
   signature: string;
   clone?: CloneInfo;
+  /** For a `var` or `proc`: the lines of its module, where its bare name can be used. */
+  scope?: { start: number; end: number };
 }
 
 export interface CloneInfo {
@@ -72,14 +75,14 @@ export class DeclarationIndex {
 
   /** Replaces what is known about `file` with the declarations of `text`. */
   update(file: string, text: string): void {
-    const lineStarts = [0];
-    for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) lineStarts.push(i + 1);
-    let line = 0;
+    const lineStarts = lineStartsOf(text);
     const entries: IndexEntry[] = [];
-    // Names come in source order, so the line only moves forward.
+    /** The modules around the declaration being read, outermost first. */
+    const modules: Declaration[] = [];
     for (const d of parseDeclarations(text)) {
       if (!d.name) continue; // an unnamed section
-      while (line + 1 < lineStarts.length && lineStarts[line + 1] <= d.nameStart) line++;
+      while (modules.length > 0 && d.start >= modules[modules.length - 1].end) modules.pop();
+      const line = lineAt(lineStarts, d.nameStart);
       const column = d.nameStart - lineStarts[line];
       const indent = d.start - (text.lastIndexOf("\n", d.start - 1) + 1);
       const entry: IndexEntry = {
@@ -102,6 +105,11 @@ export class DeclarationIndex {
           renames: d.renames ?? [],
         };
       }
+      const owner = modules[modules.length - 1];
+      if (owner && (d.kind === "var" || d.kind === "proc")) {
+        entry.scope = { start: lineAt(lineStarts, owner.start), end: lineAt(lineStarts, owner.end - 1) };
+      }
+      if (d.kind === "module" || d.kind === "module type") modules.push(d);
       entries.push(entry);
     }
     const clones = entries.filter((e) => e.clone !== undefined);

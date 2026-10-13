@@ -25,6 +25,16 @@ test("nameAt takes the name under the cursor, up to the part it is on", () => {
   assert.equal(nameAt(line, line.length), undefined, "the final dot is not a name");
 });
 
+test("nameAt leaves out the arguments of a module", () => {
+  const line = "equiv e : G(A(O), B).main ~ M(A).O.f : true ==> (res{1}).`1.";
+  assert.deepEqual(nameAt(line, line.indexOf("main")), { name: "G.main", start: 21, end: 25 });
+  assert.equal(nameAt(line, line.indexOf("G("))?.name, "G");
+  assert.equal(nameAt(line, line.indexOf("O)"))?.name, "O");
+  assert.equal(nameAt(line, line.indexOf(".f") + 1)?.name, "M.O.f");
+  assert.equal(nameAt(line, line.indexOf("O.f"))?.name, "M.O");
+  assert.equal(nameAt("rewrite (addrC x).y", 18)?.name, "y", "not after a module");
+});
+
 test("nameAt ignores type variables and memories, but not primed names", () => {
   assert.equal(nameAt("op f (x : 'a) = x.", 11), undefined);
   assert.equal(nameAt("Pr[M.f() @ &m : res]", 13), undefined);
@@ -78,4 +88,48 @@ test("without a file, everything is elsewhere", () => {
   const r = resolve(index(), undefined, "shared");
   assert.equal(r.sameFile.length + r.required.length, 0);
   assert.equal(r.elsewhere.length, 3);
+});
+
+const GAME = `require import AllCore.
+module type Adv = {
+  proc guess() : bool
+}.
+module G (A : Adv) = {
+  var b : bool
+  proc main() : bool = {
+    b <@ A.guess();
+    return b;
+  }
+}.
+lemma l (b : bool) &m : Pr[G(A).main() @ &m : G.b] = 1%r.
+`;
+
+function game(): DeclarationIndex {
+  const i = index();
+  i.update("/lib/Other.ec", "module G = {\n  var b : int\n}.\ntheory Lazy.\nmodule RO = {\n  var m : int\n}.\nend Lazy.");
+  i.update("/proj/Game.ec", GAME);
+  return i;
+}
+
+test("a module name selects its variables and procedures", () => {
+  const i = game();
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "G.b"))), ["/proj/Game.ec:5"]);
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "G.main"))), ["/proj/Game.ec:6"]);
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Main.ec", "G.b"))), ["/lib/Other.ec:1", "/proj/Game.ec:5"]);
+  // `A` is a parameter: only the name is left.
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "A.guess"))), ["/proj/Game.ec:2"]);
+});
+
+test("a bare name is a variable or procedure only inside its module", () => {
+  const i = game();
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "b", 7))), ["/proj/Game.ec:5"]);
+  assert.deepEqual(nearest(resolve(i, "/proj/Game.ec", "b", 11)), [], "a lemma's own variable");
+  assert.deepEqual(nearest(resolve(i, "/proj/Game.ec", "b")), [], "the line is not known");
+  assert.deepEqual(nearest(resolve(i, "/proj/Main.ec", "main", 1)), []);
+});
+
+test("the names of a clone before a module are dropped", () => {
+  const i = game();
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "H.Lazy.RO.m"))), ["/lib/Other.ec:5"]);
+  assert.deepEqual(where(nearest(resolve(i, "/proj/Game.ec", "H.RO.m"))), ["/lib/Other.ec:5"]);
 });

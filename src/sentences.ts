@@ -188,6 +188,25 @@ export function skipBlanksBackward(text: string, offset: number): number {
   return i;
 }
 
+/** The offsets at which the lines of `text` start. */
+export function lineStartsOf(text: string): number[] {
+  const starts = [0];
+  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) starts.push(i + 1);
+  return starts;
+}
+
+/** The 0-based line of `offset`. */
+export function lineAt(lineStarts: number[], offset: number): number {
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low < high) {
+    const mid = (low + high + 1) >> 1;
+    if (lineStarts[mid] <= offset) low = mid;
+    else high = mid - 1;
+  }
+  return low;
+}
+
 /** Converts a UTF-8 byte offset into `s`, as EasyCrypt reports them, to a string offset. */
 export function byteToCharOffset(s: string, byteOffset: number): number {
   if (byteOffset <= 0) return 0;

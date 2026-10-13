@@ -45,6 +45,20 @@ lemma last : true by [].
   ]);
 });
 
+test("variables and procedures nest inside their module", () => {
+  const text = `
+module M = {
+  var x : int
+  module O = {
+    proc f() = {}
+  }
+  proc g() = {}
+}.
+op after : int.
+`;
+  assert.deepEqual(render(outlineTree(parseDeclarations(text))), ["M", "  x", "  O", "    f", "  g", "after"]);
+});
+
 test("a proof folds under its statement", () => {
   const text = ["lemma a (x : int) :", "  x = x.", "proof.", "  trivial.", "qed.", "lemma b : true by []."].join("\n");
   assert.deepEqual(folds(text), ["2-5"]);

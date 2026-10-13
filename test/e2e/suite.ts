@@ -362,6 +362,37 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "module variables and procedures are in the outline and can be reached",
+    async () => {
+      await api.indexReady;
+      const doc = (await open("game.ec")).document;
+      const text = doc.getText();
+      const symbols = await waitFor("outline", async () => {
+        const found = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", doc.uri);
+        return found?.length ? found : undefined;
+      });
+      assert.deepEqual(
+        symbols.map((s) => [s.name, ...s.children.map((c) => `${vscode.SymbolKind[c.kind]} ${c.name}`)]),
+        [["Adv", "Method guess"], ["G", "Variable b", "Method main"], ["main_ll"]],
+      );
+
+      /** The position of the last character of the last occurrence of `use`. */
+      const atEnd = (use: string) => doc.positionAt(text.lastIndexOf(use) + use.length - 1);
+      const definitions = async (use: string) => {
+        const found = await vscode.commands.executeCommand<vscode.Location[]>("vscode.executeDefinitionProvider", doc.uri, atEnd(use));
+        return found.map((l) => `${l.uri.fsPath.split("/").pop()}:${l.range.start.line}`);
+      };
+      assert.deepEqual(await definitions("G(A).main"), ["game.ec:9"], "a procedure of an applied module");
+      assert.deepEqual(await definitions("return b"), ["game.ec:7"], "a variable, inside its module");
+      assert.deepEqual(await definitions("b <@ A.guess"), ["game.ec:3"], "a procedure of a module parameter");
+
+      const hovers = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", doc.uri, atEnd("G(A).main"));
+      const shown = hovers.flatMap((h) => h.contents.map((c) => (typeof c === "string" ? c : c.value))).join("\n");
+      assert.match(shown, /proc main\(\) : bool/);
+      assert.match(shown, /proc `G\.main`/);
+    },
+  ],
+  [
     "library files open read-only until editing is allowed",
     async () => {
       await api.indexReady;

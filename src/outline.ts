@@ -1,15 +1,17 @@
 // Turns the declarations of a script into an outline tree and into the line
 // ranges that can be folded. Independent of VS Code.
 
-import { Declaration } from "./declarations";
-import { commentsAndBraces } from "./sentences";
+import { Declaration, DeclarationKind } from "./declarations";
+import { commentsAndBraces, lineAt, lineStartsOf } from "./sentences";
 
 export interface OutlineNode {
   declaration: Declaration;
   children: OutlineNode[];
 }
 
-/** Nests declarations inside the theories and sections that contain them. */
+const CONTAINERS = new Set<DeclarationKind>(["theory", "section", "module", "module type"]);
+
+/** Nests declarations inside the theories, sections and modules that contain them. */
 export function outlineTree(declarations: Declaration[]): OutlineNode[] {
   const roots: OutlineNode[] = [];
   const open: OutlineNode[] = [];
@@ -17,7 +19,7 @@ export function outlineTree(declarations: Declaration[]): OutlineNode[] {
     while (open.length > 0 && declaration.start >= open[open.length - 1].declaration.end) open.pop();
     const node = { declaration, children: [] };
     (open.length > 0 ? open[open.length - 1].children : roots).push(node);
-    if (declaration.kind === "theory" || declaration.kind === "section") open.push(node);
+    if (CONTAINERS.has(declaration.kind)) open.push(node);
   }
   return roots;
 }
@@ -31,18 +33,8 @@ export interface FoldingRange {
 
 /** What can be folded: proofs, theories, sections, `{ }` blocks, long declarations and comments. */
 export function foldingRanges(text: string, declarations: Declaration[]): FoldingRange[] {
-  const lineStarts = [0];
-  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) lineStarts.push(i + 1);
-  const lineOf = (offset: number) => {
-    let low = 0;
-    let high = lineStarts.length - 1;
-    while (low < high) {
-      const mid = (low + high + 1) >> 1;
-      if (lineStarts[mid] <= offset) low = mid;
-      else high = mid - 1;
-    }
-    return low;
-  };
+  const lineStarts = lineStartsOf(text);
+  const lineOf = (offset: number) => lineAt(lineStarts, offset);
   const lineStartsWith = (line: number, prefix: string) => {
     let i = lineStarts[line];
     while (text[i] === " " || text[i] === "\t") i++;
@@ -62,7 +54,7 @@ export function foldingRanges(text: string, declarations: Declaration[]): Foldin
     if (d.kind === "theory" || d.kind === "section") {
       // Keep the closing `end T.` visible.
       add(first, lineStartsWith(last, "end") ? last - 1 : last);
-    } else if (d.end > d.signatureEnd) {
+    } else if (d.kind === "lemma" && d.end > d.signatureEnd) {
       // A proof: the statement stays visible.
       add(lineOf(d.signatureEnd - 1), last);
     } else {

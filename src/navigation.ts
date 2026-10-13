@@ -19,7 +19,10 @@ export function registerNavigation(
 ): void {
   const lookup = (doc: vscode.TextDocument, position: vscode.Position) => {
     const at = nameAt(doc.lineAt(position.line).text, position.character);
-    return at && { at, found: resolve(index, contextFile(doc), at.name) };
+    const file = contextFile(doc);
+    // The line only means something in the script itself.
+    const line = doc.uri.scheme === "file" && doc.uri.fsPath === file ? position.line : undefined;
+    return at && { at, found: resolve(index, file, at.name, line) };
   };
   const selector = languages.map((language) => ({ language }));
 

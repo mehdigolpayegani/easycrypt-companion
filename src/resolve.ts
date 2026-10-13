@@ -7,13 +7,35 @@ import { DeclarationIndex, IndexEntry, theoryOfFile } from "./index";
 const QUALIFIED = /[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*/g;
 // EasyCrypt loads these before any script.
 const PRELUDE = ["Pervasive", "Logic", "Tactics"];
+// A module name at the end of a text.
+const MODULE_BEFORE = /[A-Za-z_][A-Za-z0-9_'.]*$/;
 
 export interface NameAt {
-  /** The name up to the part under the cursor: `Ring` or `Ring.addrC` in `Ring.addrC`. */
+  /**
+   * The name up to the part under the cursor: `Ring` or `Ring.addrC` in
+   * `Ring.addrC`. Module arguments are left out: `G.main` in `G(A).main`.
+   */
   name: string;
   /** Columns of the part under the cursor. */
   start: number;
   end: number;
+}
+
+/** `G.` if the name at `start` follows the applied module `G(A, B).`, else nothing. */
+function appliedModule(line: string, start: number): string {
+  let prefix = "";
+  while (line[start - 1] === "." && line[start - 2] === ")") {
+    let open = start - 2;
+    for (let depth = 0; open >= 0; open--) {
+      if (line[open] === ")") depth++;
+      else if (line[open] === "(" && --depth === 0) break;
+    }
+    const applied = MODULE_BEFORE.exec(line.slice(0, Math.max(open, 0)));
+    if (!applied) break;
+    prefix = `${applied[0]}.${prefix}`;
+    start = applied.index;
+  }
+  return prefix;
 }
 
 /** The name at `column` of `line`, if any. Type variables (`'a`) and memories (`&m`) are not names. */
@@ -26,7 +48,7 @@ export function nameAt(line: string, column: number): NameAt | undefined {
     let start = m.index;
     for (const part of m[0].split(".")) {
       const end = start + part.length;
-      if (column <= end) return { name: line.slice(m.index, end), start, end };
+      if (column <= end) return { name: appliedModule(line, m.index) + line.slice(m.index, end), start, end };
       start = end + 1;
     }
   }
@@ -58,20 +80,27 @@ function requiredFiles(index: DeclarationIndex, file: string): Set<string> {
 }
 
 /**
- * What `name` (possibly qualified) may refer to when used in `file`. Clones
- * are followed to the theory they copy. A qualifier that still matches
- * nothing is ignored.
+ * What `name` (possibly qualified) may refer to when used in `file`, at
+ * `line` if known. Clones are followed to the theory they copy. A qualifier
+ * that still matches nothing is ignored.
  */
-export function resolve(index: DeclarationIndex, file: string | undefined, name: string): Resolution {
+export function resolve(index: DeclarationIndex, file: string | undefined, name: string, line?: number): Resolution {
   const qualifier = name.split(".");
   const base = qualifier.pop()!;
   const required = file === undefined ? new Set<string>() : requiredFiles(index, file);
   let candidates = index.named(base);
   if (qualifier.length > 0) {
-    let qualified = candidates.filter((e) => endsWith([theoryOfFile(e.file), ...e.path], qualifier));
+    const within = (q: string[]) => candidates.filter((e) => endsWith([theoryOfFile(e.file), ...e.path], q));
+    let qualified = within(qualifier);
     if (qualified.length === 0) qualified = membersOf(index, { file: file ?? "", path: [] }, qualifier, base);
+    // The first names may be those of a clone: `RO.Lazy.m` for `Lazy.m`.
+    for (let q = qualifier.slice(1); q.length > 0 && qualified.length === 0; q = q.slice(1)) qualified = within(q);
     if (qualified.length > 0) candidates = qualified;
   } else {
+    // A `var` or `proc` is named without its module only inside that module.
+    candidates = candidates.filter(
+      (e) => !e.scope || (e.file === file && line !== undefined && e.scope.start <= line && line <= e.scope.end),
+    );
     // A file is a theory too: `List` is List.ec.
     const files = index.filesOfTheory(base).map((path): IndexEntry => ({
       file: path,

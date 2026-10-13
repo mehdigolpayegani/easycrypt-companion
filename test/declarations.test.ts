@@ -32,7 +32,9 @@ module type T = { proc f() : unit }.
     "axiom zeroP",
     "lemma zero_small",
     "module M",
+    "proc M.f",
     "module type T",
+    "proc T.f",
   ]);
 });
 
@@ -152,8 +154,104 @@ declare module A <: Adv {-G}.
 local module (S : Sim) (O : Orcl) = { proc f() = {} }.
 module type Adv (O : Orcl) = { proc a() : unit }.
 `;
-  assert.deepEqual(summary(text), ["module G", "module A", "module S", "module type Adv"]);
+  assert.deepEqual(summary(text), [
+    "module G",
+    "proc G.main",
+    "module A",
+    "module S",
+    "proc S.f",
+    "module type Adv",
+    "proc Adv.a",
+  ]);
   assert.equal(find(text, "A").keyword, "declare module");
+});
+
+test("modules declare their variables and procedures", () => {
+  const text = `
+module M (A : Adv) : T = {
+  var x : int
+  var m0, m1 : (int, bool) fmap
+  proc f(a : int) : int = {
+    var r; (* local *)
+    r <- a;
+    return r;
+  }
+  proc g = N.f
+  include Other
+  include var Other(A)
+  import var N
+}.
+module type T = {
+  proc init() : unit
+  proc get(x : int) : bool {O.h}
+}.
+`;
+  assert.deepEqual(summary(text), [
+    "module M",
+    "var M.x",
+    "var M.m0",
+    "var M.m1",
+    "proc M.f",
+    "proc M.g",
+    "module type T",
+    "proc T.init",
+    "proc T.get",
+  ]);
+  const slice = (name: string) => {
+    const d = find(text, name);
+    return [text.slice(d.start, d.signatureEnd), text.slice(d.signatureEnd, d.end)];
+  };
+  assert.deepEqual(slice("x"), ["var x : int", ""]);
+  assert.deepEqual(slice("m1"), ["var m0, m1 : (int, bool) fmap", ""]);
+  assert.equal(slice("f")[0], "proc f(a : int) : int");
+  assert.match(slice("f")[1], /^ = \{[^}]*return r;\n  \}$/);
+  assert.deepEqual(slice("g"), ["proc g = N.f", ""]);
+  assert.deepEqual(slice("get"), ["proc get(x : int) : bool {O.h}", ""]);
+  assert.equal(text.slice(find(text, "m1").nameStart, find(text, "m1").nameEnd), "m1");
+});
+
+test("inner modules, aliases and updated modules", () => {
+  const text = `
+theory Th.
+module CCA (S : Scheme, A : Adv) = {
+  var log : int list
+  module O = {
+    proc dec(c : int) : int = { return c; }
+  }
+  module A = A(O)
+  proc main() : bool = { return true; }
+}.
+local module Game1 = CCA(S, A) with {
+  var r : int
+  proc main [ var h : int  ^ <@ {2} ~ { r <$ d; } ]
+}.
+module Alias = CCA(S).
+declare module B <: Adv {-CCA}.
+end Th.
+`;
+  assert.deepEqual(summary(text), [
+    "theory Th",
+    "module Th.CCA",
+    "var Th.CCA.log",
+    "module Th.CCA.O",
+    "proc Th.CCA.O.dec",
+    "module Th.CCA.A",
+    "proc Th.CCA.main",
+    "module Th.Game1",
+    "var Th.Game1.r",
+    "proc Th.Game1.main",
+    "module Th.Alias",
+    "module Th.B",
+  ]);
+  const inner = find(text, "O");
+  assert.match(text.slice(inner.start, inner.end), /^module O = \{[^}]*\}\n  \}$/);
+  const updated = parseDeclarations(text).find((d) => qualifiedName(d) === "Th.Game1.main")!;
+  assert.equal(text.slice(updated.start, updated.signatureEnd), "proc main");
+});
+
+test("comments and strings inside a module declare nothing", () => {
+  const text = 'module M = {\n  (* var hidden : int } *)\n  proc f() = { x <- "} var y"; }\n  var z : int\n}.\nop after : int.';
+  assert.deepEqual(summary(text), ["module M", "proc M.f", "var M.z", "op after"]);
 });
 
 test("const and inductive; `as` names an axiom", () => {
