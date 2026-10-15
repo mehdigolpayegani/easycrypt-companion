@@ -11,6 +11,7 @@
 - The variables and procedures of modules are in the outline, in Go to Symbol and in Go to Definition: `G(A).main`, `M.x`.
 - Showing the panes no longer moves the focus through them. VS Code 1.92 or later is required.
 - Completion of declared names, with their statement and a note on those that need a `require`; `easycryptCompanion.completion` turns it off.
+- Completion also offers the names that clones give, such as `IntID.addrC` and `dbool_ll`.
 
 ## 0.1.0
 

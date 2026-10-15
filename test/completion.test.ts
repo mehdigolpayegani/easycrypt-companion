@@ -169,3 +169,53 @@ test("long lists are cut and reported as incomplete", () => {
   assert.equal(items[0].name, "lem_0");
   assert.equal(suggest(i, "/lib/Many.ec", 0, typed("lem_29")).complete, true);
 });
+
+const CLONED = "/proj/Cloned.ec";
+
+function cloned(): DeclarationIndex {
+  const i = new DeclarationIndex();
+  i.update(
+    "/lib/Ring.ec",
+    "abstract theory ZModule.\n  axiom addrC : true.\n  axiom addrA : true.\nend ZModule.\ntheory IntID.\n  clone include ZModule.\nend IntID.\n",
+  );
+  i.update("/lib/Distr.ec", "abstract theory MFinite.\n  lemma dunifin_ll : true by [].\nend MFinite.\n");
+  i.update("/lib/DBool.ec", 'require import Distr.\nclone include Distr.MFinite rename "dunifin" as "dbool".\n');
+  i.update("/lib/Other.ec", "theory T.\n  lemma far_lemma : true by [].\nend T.\n");
+  i.update(CLONED, "require import Ring DBool.\nclone import Other.T as OT.\nlemma l : true.\n");
+  i.update("/proj/Bare.ec", "lemma b : true by [].\n");
+  return i;
+}
+
+/** Name, nearness, note and the declaration shown. */
+const through = (i: DeclarationIndex, file: string, name: string) =>
+  suggest(i, file, 2, typed(name)).items.map((s) => [
+    s.name,
+    Near[s.near],
+    s.needs,
+    s.entry && `${s.entry.kind} ${[...s.entry.path, s.entry.name].join(".")}`,
+  ]);
+
+test("what clones bring is suggested under the names they give", () => {
+  const i = cloned();
+  assert.deepEqual(through(i, CLONED, "IntID.add"), [
+    ["addrA", "Required", undefined, "axiom ZModule.addrA"],
+    ["addrC", "Required", undefined, "axiom ZModule.addrC"],
+  ]);
+  assert.deepEqual(through(i, CLONED, "dbool_"), [["dbool_ll", "Required", undefined, "lemma MFinite.dunifin_ll"]]);
+  assert.deepEqual(through(i, CLONED, "DBool.db"), [["dbool_ll", "Required", undefined, "lemma MFinite.dunifin_ll"]]);
+  const [renamed] = suggest(i, CLONED, 2, typed("dbool_")).items;
+  assert.equal(renamed.via, "/lib/DBool.ec", "the file that gives the name");
+  assert.equal(suggest(i, CLONED, 2, typed("IntID.addrC")).items[0].via, undefined, "the same file as the declaration");
+});
+
+test("the script's own clones are near", () => {
+  const i = cloned();
+  assert.deepEqual(through(i, CLONED, "fa"), [["far_lemma", "File", undefined, "lemma T.far_lemma"]]);
+  assert.deepEqual(through(i, CLONED, "OT."), [["far_lemma", "File", undefined, "lemma T.far_lemma"]]);
+});
+
+test("the theory to require is the one with the clone", () => {
+  const i = cloned();
+  assert.deepEqual(through(i, "/proj/Bare.ec", "dbool_"), [["dbool_ll", "Elsewhere", "DBool", "lemma MFinite.dunifin_ll"]]);
+  assert.deepEqual(through(i, "/proj/Bare.ec", "DBool.db"), [["dbool_ll", "Elsewhere", "DBool", "lemma MFinite.dunifin_ll"]]);
+});

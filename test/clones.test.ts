@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { membersOf } from "../src/clones";
+import { allMembersOf, allOpenedByClones, Member, membersOf } from "../src/clones";
 import { DeclarationIndex, IndexEntry } from "../src/index";
-import { nearest, resolve } from "../src/resolve";
+import { nearest, requiredFiles, resolve } from "../src/resolve";
 
 // A small library shaped like EasyCrypt's Ring.ec, Distr.ec and DBool.ec.
 const RING = `abstract theory ZModule.
@@ -96,4 +96,52 @@ test("clones that include each other do not loop", () => {
 
 test("an unknown qualifier still falls back to the name", () => {
   assert.deepEqual(find("Nowhere.addrC"), ["axiom ZModule.addrC"]);
+});
+
+/** Each name with the declaration it shows and where it was reached. */
+const listed = (members: Member[]) =>
+  members
+    .map((m) => `${m.name} = ${m.entry.kind} ${[...m.entry.path, m.entry.name].join(".")} @ ${m.home}`)
+    .sort();
+
+test("all the members of a theory, through its clones", () => {
+  const from = { file: "/proj/Main.ec", path: [] };
+  assert.deepEqual(listed(allMembersOf(index(), from, ["IntID"])), [
+    "addrC = axiom ZModule.addrC @ /lib/Ring.ec",
+    "mulrC = axiom ComRing.mulrC @ /lib/Ring.ec",
+  ]);
+  assert.deepEqual(listed(allMembersOf(index(), from, ["RField"])), [
+    "addrC = axiom ZModule.addrC @ /lib/Ring.ec",
+    "mulrC = axiom ComRing.mulrC @ /lib/Ring.ec",
+  ]);
+  assert.deepEqual(listed(allMembersOf(index(), { file: "/lib/Ring.ec", path: [] }, ["ZM1"])), [
+    "addrC = axiom ZModule.addrC @ /lib/Ring.ec",
+  ]);
+});
+
+test("all the members of a clone are renamed, each rename for its kinds", () => {
+  const from = { file: "/proj/Main.ec", path: [] };
+  assert.deepEqual(listed(allMembersOf(index(), from, ["DBool"])), [
+    "dbool = op MFinite.dunifin @ /lib/DBool.ec",
+    "dboolE_count = lemma MFinite.dunifinE @ /lib/DBool.ec",
+    "dbool_ll = lemma MFinite.dunifin_ll @ /lib/DBool.ec",
+    "elem = type MFinite.t @ /lib/DBool.ec",
+  ]);
+});
+
+test("all the members opened by clones, with the file of each clone", () => {
+  const i = index();
+  const required = requiredFiles(i, "/proj/Main.ec");
+  assert.deepEqual(listed(allOpenedByClones(i, "/proj/Main.ec", required)), [
+    "dbool = op MFinite.dunifin @ /lib/DBool.ec",
+    "dboolE_count = lemma MFinite.dunifinE @ /lib/DBool.ec",
+    "dbool_ll = lemma MFinite.dunifin_ll @ /lib/DBool.ec",
+    "elem = type MFinite.t @ /lib/DBool.ec",
+    "far_lemma = lemma T.far_lemma @ /proj/Main.ec",
+  ]);
+});
+
+test("listing clones that include each other ends", () => {
+  const from = { file: "/lib/Loop.ec", path: [] };
+  assert.deepEqual([...new Set(allMembersOf(index(), from, ["A"]).map((m) => m.name))], ["inB"]);
 });

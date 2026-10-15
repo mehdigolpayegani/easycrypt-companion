@@ -64,7 +64,7 @@ function completionItem(s: Suggestion, range: CompletionRange): vscode.Completio
   const e = s.entry;
   const item = e
     ? new vscode.CompletionItem(
-        { label: s.name, description: s.needs ? `needs require ${s.needs}` : basename(e.file) },
+        { label: s.name, description: s.needs ? `needs require ${s.needs}` : basename(s.via ?? e.file) },
         COMPLETION_KINDS[e.kind],
       )
     : new vscode.CompletionItem(s.name, vscode.CompletionItemKind.Text);

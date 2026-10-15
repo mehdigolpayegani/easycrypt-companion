@@ -403,6 +403,12 @@ const tests: Array<[string, () => Promise<void>]> = [
       const procs = await complete("game.ec", "\nlemma c : islossless G(A).ma");
       assert.equal(procs.get("main")?.item.kind, vscode.CompletionItemKind.Method);
 
+      // Through clones, under the names they give.
+      assert.ok((await complete("nav.ec", "\nlemma c : true by rewrite IntID.addr")).has("addrC"), "through clone include");
+      const renamed = (await complete("nav.ec", "\nlemma c : true by apply: dbool_l")).get("dbool_ll");
+      assert.equal(renamed?.note, "DBool.ec", "a renamed member");
+      assert.match((renamed!.item.documentation as vscode.MarkdownString).value, /lemma dunifin_ll/);
+
       // Words of the scripts: with our names, and from VS Code itself for a single letter.
       const words = await complete("outline.ec", "\nlemma c : true by tri");
       assert.equal(words.get("trivial")?.item.kind, vscode.CompletionItemKind.Text);

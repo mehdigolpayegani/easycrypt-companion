@@ -158,3 +158,65 @@ export function openedByClones(
   }
   return [...found];
 }
+
+/** A declaration as seen through clones: under the name the renames give it. */
+export interface Member {
+  name: string;
+  entry: IndexEntry;
+  /** The file holding the theory or clone it was reached through. */
+  home: string;
+}
+
+/** All the members the copy `clone` makes, renamed. */
+function allThroughClone(index: DeclarationIndex, clone: IndexEntry, depth: number): Member[] {
+  const { source, renames } = clone.clone!;
+  const from = { file: clone.file, path: clone.path };
+  return allMembersOf(index, from, source.split("."), depth + 1).map((m) => ({
+    name: renamed(renames, m.entry.kind, m.name),
+    entry: m.entry,
+    home: clone.file,
+  }));
+}
+
+function allMembersOfTheory(index: DeclarationIndex, theory: TheoryRef, depth: number): Member[] {
+  const inside = (e: IndexEntry) => sameArray(e.path, theory.path);
+  const found: Member[] = [];
+  for (const entry of index.declarationsOf(theory.file)) {
+    if (inside(entry) && !entry.clone?.include) found.push({ name: entry.name, entry, home: theory.file });
+  }
+  for (const clone of index.clonesOf(theory.file)) {
+    if (!clone.clone!.include || !inside(clone)) continue;
+    for (const m of allThroughClone(index, clone, depth)) found.push({ ...m, home: theory.file });
+  }
+  return found;
+}
+
+/** All the members of the theory `names`, seen from `from`, including what clones bring. */
+export function allMembersOf(index: DeclarationIndex, from: TheoryRef, names: string[], depth = 0): Member[] {
+  if (depth > MAX_DEPTH) return [];
+  return denoted(index, from, names).flatMap((d) =>
+    "clone" in d ? allThroughClone(index, d.clone, depth) : allMembersOfTheory(index, d.theory, depth),
+  );
+}
+
+/**
+ * All the members that clones open without a qualifier, as in
+ * `openedByClones`: those of `file`, and the top-level `clone include` and
+ * `clone export` of the `others` files.
+ */
+export function allOpenedByClones(index: DeclarationIndex, file: string, others: Iterable<string>): Member[] {
+  const found: Member[] = [];
+  for (const clone of index.clonesOf(file)) {
+    const { include, import: imported, export: exported } = clone.clone!;
+    if (include || imported || exported) found.push(...allThroughClone(index, clone, 0));
+  }
+  for (const other of others) {
+    if (other === file) continue;
+    for (const clone of index.clonesOf(other)) {
+      if (clone.path.length === 0 && (clone.clone!.include || clone.clone!.export)) {
+        found.push(...allThroughClone(index, clone, 0));
+      }
+    }
+  }
+  return found;
+}

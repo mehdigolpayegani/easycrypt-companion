@@ -1,7 +1,8 @@
-// Chooses the names to suggest while typing: the declarations of the index
-// and the words of the open scripts. Independent of VS Code.
+// Chooses the names to suggest while typing: the declarations of the index,
+// also as clones name them, and the words of the open scripts. Independent
+// of VS Code.
 
-import { endsWith } from "./clones";
+import { allMembersOf, allOpenedByClones, endsWith } from "./clones";
 import { DeclarationIndex, IndexEntry, theoryOfFile } from "./index";
 import { appliedModule, inScope, requiredFiles } from "./resolve";
 
@@ -53,6 +54,8 @@ export interface Suggestion {
   entry?: IndexEntry;
   /** The theory to `require` before the name can be used. */
   needs?: string;
+  /** For a name a clone gives: the file of that clone. */
+  via?: string;
 }
 
 export interface Suggestions {
@@ -85,7 +88,10 @@ function best(items: Ranked[], limit: number): Ranked[] {
   return items.slice(0, limit);
 }
 
-/** The declarations matching `typed`, inside `qualifier` if there is one; the nearest of each name. */
+/**
+ * The declarations matching `typed`, inside `qualifier` if there is one,
+ * including what clones bring; the nearest of each name.
+ */
 function declarations(
   index: DeclarationIndex,
   file: string | undefined,
@@ -97,37 +103,42 @@ function declarations(
   const known = file !== undefined && index.has(file);
   const required = known ? requiredFiles(index, file) : new Set<string>();
   const byName = new Map<string, Ranked>();
-  const add = (found: Ranked) => {
-    const previous = byName.get(found.name);
-    if (!previous || found.near < previous.near) byName.set(found.name, found);
+  /** Adds `entry` under `name`, as found in `home`; `noted` if it says what to require. */
+  const add = (name: string, entry: IndexEntry, home: string, noted = true) => {
+    const near = home === file ? Near.File : required.has(home) ? Near.Required : Near.Elsewhere;
+    // Without a qualifier, the names of other files wait for a third letter.
+    if (qualifier.length === 0 && near !== Near.File && typed.length < MIN_LENGTH_OTHER_FILES) return;
+    // Sections and operators such as `(+)` are not typed as names.
+    if (entry.kind === "section" || !/^[A-Za-z_]/.test(name)) return;
+    const rank = rankOf(typed, name);
+    const previous = byName.get(name);
+    if (rank === undefined || (previous && previous.near <= near)) return;
+    const found: Ranked = { name, near, entry, rank };
+    if (noted && known && near === Near.Elsewhere) found.needs = theoryOfFile(home);
+    if (home !== entry.file) found.via = home;
+    byName.set(name, found);
   };
 
   for (const other of index.files()) {
-    const near = other === file ? Near.File : required.has(other) ? Near.Required : Near.Elsewhere;
     const theory = theoryOfFile(other);
     for (const entry of index.declarationsOf(other)) {
-      // Sections and operators such as `(+)` are not typed as names.
-      if (entry.kind === "section" || !/^[A-Za-z_]/.test(entry.name)) continue;
-      const rank = rankOf(typed, entry.name);
-      if (rank === undefined) continue;
-      const fits =
-        qualifier.length > 0
-          ? endsWith([theory, ...entry.path], qualifier)
-          : inScope(entry, file, line) && (near === Near.File || typed.length >= MIN_LENGTH_OTHER_FILES);
-      if (!fits) continue;
-      const found: Ranked = { name: entry.name, near, entry, rank };
-      if (known && near === Near.Elsewhere) found.needs = theory;
-      add(found);
+      const fits = qualifier.length > 0 ? endsWith([theory, ...entry.path], qualifier) : inScope(entry, file, line);
+      if (fits) add(entry.name, entry, other);
     }
     // A file is a theory too.
-    const named = qualifier.length === 0 && other !== file && typed.length >= MIN_LENGTH_OTHER_FILES;
-    const rank = named ? rankOf(typed, theory) : undefined;
-    if (rank !== undefined) {
+    if (qualifier.length === 0 && other !== file) {
       const position = { line: 0, column: 0, endColumn: 0 };
-      const entry: IndexEntry = { file: other, kind: "theory", name: theory, path: [], ...position, signature: "" };
-      add({ name: theory, near, entry, rank });
+      add(theory, { file: other, kind: "theory", name: theory, path: [], ...position, signature: "" }, other, false);
     }
   }
+  // Under the names the renames of the clones give; those of files still to
+  // require are suggested too, like their other declarations.
+  const from = file ?? "";
+  const cloned =
+    qualifier.length > 0
+      ? allMembersOf(index, { file: from, path: [] }, qualifier)
+      : allOpenedByClones(index, from, index.files());
+  for (const member of cloned) add(member.name, member.entry, member.home);
   return [...byName.values()];
 }
 
