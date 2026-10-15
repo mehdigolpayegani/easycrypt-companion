@@ -194,6 +194,31 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "search results are listed, and each leads to its own lemma",
+    async () => {
+      await open("proof.ec");
+      await exec("search", "zz");
+      await idle();
+      await paneShows(RESPONSE_URI, /Left\.same/);
+      const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+        "vscode.executeDocumentSymbolProvider",
+        RESPONSE_URI,
+      );
+      assert.deepEqual(symbols.map((s) => s.name).sort(), ["Left.same", "Right.same"]);
+      // Both are called `same`: the comment above each tells them apart.
+      const helper = (await vscode.workspace.openTextDocument(join(workspace(), "Helper.ec"))).getText().split("\n");
+      for (const s of symbols) {
+        const found = await vscode.commands.executeCommand<vscode.Location[]>(
+          "vscode.executeDefinitionProvider",
+          RESPONSE_URI,
+          s.selectionRange.start,
+        );
+        const lemma = helper.indexOf(`theory ${s.name.split(".")[0]}.`) + 1;
+        assert.deepEqual(found.map((l) => `${l.uri.fsPath.split("/").pop()}:${l.range.start.line}`), [`Helper.ec:${lemma}`], s.name);
+      }
+    },
+  ],
+  [
     "weak-check mode toggles",
     async () => {
       await open("proof.ec");

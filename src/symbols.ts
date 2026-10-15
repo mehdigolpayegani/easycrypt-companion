@@ -1,8 +1,10 @@
-// Gives VS Code the outline and the folding ranges of EasyCrypt scripts.
+// Gives VS Code the outline and the folding ranges of EasyCrypt scripts, and
+// the outline of the response pane.
 
 import * as vscode from "vscode";
 import { DeclarationKind, parseDeclarations } from "./declarations";
 import { foldingRanges, OutlineNode, outlineTree } from "./outline";
+import { results } from "./results";
 
 export const SYMBOL_KINDS: Record<DeclarationKind, vscode.SymbolKind> = {
   lemma: vscode.SymbolKind.Function,
@@ -67,6 +69,28 @@ export function registerOutline(context: vscode.ExtensionContext, language: stri
             (r) => new vscode.FoldingRange(r.start, r.end, r.comment ? vscode.FoldingRangeKind.Comment : undefined),
           );
         },
+      },
+    ),
+  );
+}
+
+/** Lists the lemmas and axioms of the response pane, for its outline and Go to Symbol. */
+export function registerResultsOutline(context: vscode.ExtensionContext, language: string): void {
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSymbolProvider(
+      { language },
+      {
+        provideDocumentSymbols: (doc) =>
+          results(doc.getText()).map(
+            (r) =>
+              new vscode.DocumentSymbol(
+                r.name,
+                r.kind,
+                SYMBOL_KINDS[r.kind],
+                new vscode.Range(r.start, 0, r.end, doc.lineAt(r.end).text.length),
+                new vscode.Range(r.line, r.column, r.line, r.endColumn),
+              ),
+          ),
       },
     ),
   );

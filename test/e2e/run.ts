@@ -7,7 +7,17 @@ import { dirname, join, resolve } from "node:path";
 import { runTests } from "@vscode/test-electron";
 
 const FILES: Record<string, string> = {
-  "Helper.ec": "op aa : int = 3.\nlemma aa_ok : aa = 3 by rewrite /aa.\n",
+  "Helper.ec": `op aa : int = 3.
+lemma aa_ok : aa = 3 by rewrite /aa.
+
+op zz : int = 7.
+theory Left.
+  lemma same : zz = zz by [].
+end Left.
+theory Right.
+  lemma same : zz = zz by [].
+end Right.
+`,
   "proof.ec": `require import AllCore Helper.
 
 lemma foo (x : int) : x + 0 = x.

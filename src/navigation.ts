@@ -4,7 +4,9 @@ import { basename } from "node:path";
 import * as vscode from "vscode";
 import { Suggestion, suggest, typedName } from "./completion";
 import { DeclarationIndex } from "./index";
+import { SCHEME } from "./panels";
 import { nameAt, nearest, resolve } from "./resolve";
+import { resultAt } from "./results";
 import { COMPLETION_KINDS } from "./symbols";
 
 const MAX_HOVERS = 3;
@@ -20,7 +22,10 @@ export function registerNavigation(
   contextFile: (doc: vscode.TextDocument) => string | undefined,
 ): void {
   const lookup = (doc: vscode.TextDocument, position: vscode.Position) => {
-    const at = nameAt(doc.lineAt(position.line).text, position.character);
+    let at = nameAt(doc.lineAt(position.line).text, position.character);
+    // In the response pane, a result may be named in full in the comment above it.
+    const result = at && doc.uri.scheme === SCHEME && resultAt(doc.getText(), position.line, position.character);
+    if (at && result) at = { ...at, name: result.name };
     const file = contextFile(doc);
     // The line only means something in the script itself.
     const line = doc.uri.scheme === "file" && doc.uri.fsPath === file ? position.line : undefined;

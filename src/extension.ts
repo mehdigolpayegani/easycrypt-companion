@@ -3,7 +3,7 @@ import { LANGUAGE, SessionManager } from "./manager";
 import { Panels, SCHEME } from "./panels";
 import { ProofSession } from "./session";
 import { followPosition } from "./sentences";
-import { registerOutline } from "./symbols";
+import { registerOutline, registerResultsOutline } from "./symbols";
 import { DeclarationIndex } from "./index";
 import { LibraryGuard } from "./libraryGuard";
 import { registerCompletion, registerNavigation } from "./navigation";
@@ -190,6 +190,7 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
   register("showLog", () => log.show());
 
   registerOutline(context, LANGUAGE);
+  registerResultsOutline(context, "easycrypt-output");
   const workspaceIndex = new WorkspaceIndex(log);
   const guard = new LibraryGuard(LANGUAGE, (path) => workspaceIndex.isLibraryFile(path));
   context.subscriptions.push(

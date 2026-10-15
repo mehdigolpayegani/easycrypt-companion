@@ -12,6 +12,7 @@
 - Showing the panes no longer moves the focus through them. VS Code 1.92 or later is required.
 - Completion of declared names, with their statement and a note on those that need a `require`; `easycryptCompanion.completion` turns it off.
 - Completion also offers the names that clones give, such as `IntID.addrC` and `dbool_ll`.
+- The results of `search` and `print` are listed in the outline of the response pane, and each leads to its own lemma.
 
 ## 0.1.0
 
