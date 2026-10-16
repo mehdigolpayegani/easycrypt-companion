@@ -42,6 +42,7 @@
     "@types/vscode": "~1.85.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^4.0.0",
+    "ovsx": "^1.2.0",
     "typescript": "^5.4.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"

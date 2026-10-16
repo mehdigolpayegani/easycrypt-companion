@@ -1,0 +1,41 @@
+# Publishes the extension when a version tag such as v0.1.0 is pushed. The
+# tokens come from the repository secrets VSCE_PAT and OVSX_PAT.
+
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Check that the tag is the version in package.json
+        run: |
+          version="v$(node -p 'require("./package.json").version')"
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME is not the version in package.json ($version)."
+            exit 1
+          fi
+      - name: Build the package
+        run: npm run package -- --out extension.vsix
+      # --skip-duplicate: running the job again does not fail where it already worked.
+      - name: Publish to the Visual Studio Marketplace
+        run: npx vsce publish --packagePath extension.vsix --skip-duplicate
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to Open VSX
+        run: npx ovsx publish --packagePath extension.vsix --skip-duplicate
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
