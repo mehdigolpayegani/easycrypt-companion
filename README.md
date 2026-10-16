@@ -76,29 +76,6 @@ The query commands take an optional argument, so you can bind your own keys:
 
 If another EasyCrypt extension is installed, both will handle `.ec` files and their keys and highlighting will conflict. The extension warns about this on startup; disable one of them.
 
-## Development
+## Contributing
 
-```sh
-npm install
-npm test            # unit tests, plus integration tests against a real EasyCrypt
-npm run test:e2e    # end-to-end tests in VS Code (isolated profile)
-```
-
-Press F5 in VS Code to run the extension in a development window.
-
-Highlighting is generated from EasyCrypt's lexer, so new keywords are picked up by regenerating:
-
-```sh
-node scripts/gen-grammar.mjs path/to/easycrypt/src/ecLexer.mll
-```
-
-`node scripts/corpus-check.mjs file.ec ...` runs whole files through the extension's command splitter and EasyCrypt, to check that both agree on where commands end.
-
-To release a version, set it in `package.json` and `CHANGELOG.md`, commit, then push a tag with the same number:
-
-```sh
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The Publish workflow then tests and packages the extension and publishes it to the Visual Studio Marketplace and Open VSX, with the tokens stored in the repository secrets `VSCE_PAT` and `OVSX_PAT`.
+To build the extension, run its tests or release a version, see [CONTRIBUTING.md](CONTRIBUTING.md).

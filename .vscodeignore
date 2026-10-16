@@ -9,6 +9,7 @@ scripts/**
 tsconfig.json
 .gitignore
 .github/**
+CONTRIBUTING.md
 node_modules/**
 package-lock.json
 *.vsix
