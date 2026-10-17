@@ -33,6 +33,8 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The Publish workflow then tests and packages the extension and publishes it to the Visual Studio Marketplace and Open VSX, with the tokens stored in the repository secrets `VSCE_PAT` and `OVSX_PAT`. It stops if the tag is not the version in `package.json`.
+The Publish workflow then tests and packages the extension, publishes it to Open VSX with the token stored in the repository secret `OVSX_PAT`, and creates a GitHub release with the version's changelog and the `.vsix` attached. It stops if the tag is not the version in `package.json`.
+
+The Visual Studio Marketplace is updated by hand: download the `.vsix` from the release and upload it on the publisher's page at [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage), with Update in the extension's menu (New extension, then Visual Studio Code, the first time).
 
 `npm run package` builds the `.vsix` locally, for trying it with "Install from VSIX...".

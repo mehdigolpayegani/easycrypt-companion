@@ -1,5 +1,6 @@
-# Publishes the extension when a version tag such as v0.1.0 is pushed. The
-# tokens come from the repository secrets VSCE_PAT and OVSX_PAT.
+# Publishes the extension when a version tag such as v0.1.0 is pushed: to
+# Open VSX, with the token in the repository secret OVSX_PAT, and as a GitHub
+# release with the package attached, to upload to the Marketplace by hand.
 
 name: Publish
 
@@ -7,12 +8,11 @@ on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: read
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the release
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -29,13 +29,18 @@ jobs:
             exit 1
           fi
       - name: Build the package
-        run: npm run package -- --out extension.vsix
+        run: npm run package
       # --skip-duplicate: running the job again does not fail where it already worked.
-      - name: Publish to the Visual Studio Marketplace
-        run: npx vsce publish --packagePath extension.vsix --skip-duplicate
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
       - name: Publish to Open VSX
-        run: npx ovsx publish --packagePath extension.vsix --skip-duplicate
+        run: npx ovsx publish --packagePath "easycrypt-companion-${GITHUB_REF_NAME#v}.vsix" --skip-duplicate
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      - name: Create the GitHub release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The notes are the version's section of the changelog.
+          awk -v heading="## $version" '$0 == heading { keep = 1; next } /^## / { keep = 0 } keep' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" "easycrypt-companion-$version.vsix" \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
