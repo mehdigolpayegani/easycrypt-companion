@@ -105,6 +105,7 @@ export function activate(context: vscode.ExtensionContext): CompanionApi {
 
   // ---------------------------------------------------------------- panes
   register("layout", () => manager.arrangePanels());
+  register("togglePanes", () => manager.togglePanels());
   register("showGoals", () => manager.showPanels());
   register("clearResponse", () => manager.currentSession()?.clearResponse());
 

@@ -163,6 +163,12 @@ export class SessionManager implements vscode.Disposable {
     await this.panels.arrange(config().layout);
   }
 
+  /** C-x 1: hides the panes if they are open, else arranges them. */
+  async togglePanels(): Promise<void> {
+    if (this.panels.open) await this.panels.hide();
+    else await this.arrangePanels();
+  }
+
   // --- Events ---
 
   private onEdit(e: vscode.TextDocumentChangeEvent): void {

@@ -505,6 +505,7 @@ const tests: Array<[string, () => Promise<void>]> = [
         ["ctrl+c ctrl+r", "retractBuffer"],
         ["ctrl+c ctrl+c", "interrupt"],
         ["ctrl+c ctrl+l", "layout"],
+        ["ctrl+x 1", "togglePanes"],
         ["ctrl+c ctrl+v", "sendCommand"],
         ["ctrl+c ctrl+a ctrl+p", "print"],
         ["ctrl+c ctrl+f", "search"],
@@ -532,6 +533,32 @@ const tests: Array<[string, () => Promise<void>]> = [
       } finally {
         await config.update("executable", undefined, vscode.ConfigurationTarget.Global);
       }
+    },
+  ],
+  [
+    "the panes can be hidden and shown again",
+    async () => {
+      await open("proof.ec");
+      await exec("next");
+      await idle();
+      const panes = () =>
+        vscode.window.tabGroups.all
+          .flatMap((group) => group.tabs)
+          .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === GOALS_URI.scheme).length;
+      await waitFor("the panes", () => panes() === 2, 10_000);
+      const processed = api.currentSession()!.processed.length;
+
+      await exec("togglePanes");
+      await waitFor("the panes to close", () => panes() === 0 && vscode.window.tabGroups.all.length === 1, 10_000);
+      assert.equal(api.currentSession()!.processed.length, processed, "EasyCrypt keeps its state");
+      await exec("togglePanes");
+      await waitFor("the panes to come back", () => panes() === 2 && vscode.window.tabGroups.all.length === 3, 10_000);
+
+      await exec("togglePanes");
+      await waitFor("the panes to close again", () => panes() === 0, 10_000);
+      await exec("next");
+      await idle();
+      await waitFor("the next command to bring them back", () => panes() === 2, 10_000);
     },
   ],
   // Last: it moves the focus into a pane, which VS Code then keeps reporting

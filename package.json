@@ -140,6 +140,12 @@
         "category": "EasyCrypt"
       },
       {
+        "command": "easycryptCompanion.togglePanes",
+        "title": "Hide or Show the Panes",
+        "category": "EasyCrypt",
+        "icon": "$(layout-sidebar-right)"
+      },
+      {
         "command": "easycryptCompanion.gotoProcessedEnd",
         "title": "Go to End of Processed Region",
         "category": "EasyCrypt"
@@ -226,6 +232,11 @@
           "command": "easycryptCompanion.interrupt",
           "when": "editorLangId == easycrypt && easycryptCompanion.busy",
           "group": "navigation@6"
+        },
+        {
+          "command": "easycryptCompanion.togglePanes",
+          "when": "editorLangId == easycrypt",
+          "group": "navigation@7"
         }
       ],
       "commandPalette": [
@@ -309,6 +320,11 @@
       {
         "command": "easycryptCompanion.layout",
         "key": "ctrl+c ctrl+o",
+        "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
+      },
+      {
+        "command": "easycryptCompanion.togglePanes",
+        "key": "ctrl+x 1",
         "when": "editorTextFocus && (editorLangId == easycrypt || editorLangId == easycrypt-output) && (config.easycryptCompanion.keybindings.proofGeneral == 'always' || (isMac && config.easycryptCompanion.keybindings.proofGeneral == 'auto'))"
       },
       {

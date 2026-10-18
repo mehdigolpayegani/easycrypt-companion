@@ -48,6 +48,16 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
     await this.showPanes(layout, !responseVisible, !goalsVisible);
   }
 
+  /** Whether a pane is open. */
+  get open(): boolean {
+    return paneTabs().length > 0;
+  }
+
+  /** Closes both panes; their groups close with them, so the script takes the whole width. */
+  async hide(): Promise<void> {
+    await vscode.window.tabGroups.close(paneTabs());
+  }
+
   /** C-c C-l: arranges the editor area and shows both panes. */
   async arrange(layout: Layout): Promise<void> {
     const script = vscode.window.activeTextEditor;
@@ -82,6 +92,12 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
   dispose(): void {
     this.emitter.dispose();
   }
+}
+
+function paneTabs(): vscode.Tab[] {
+  return vscode.window.tabGroups.all
+    .flatMap((group) => group.tabs)
+    .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === SCHEME);
 }
 
 function isVisible(uri: vscode.Uri): boolean {

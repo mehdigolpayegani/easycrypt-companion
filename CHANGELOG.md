@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A button in the title bar, and `C-x 1`, hide or show the goals and response panes.
+
 ## 0.1.1
 
 - An icon.
