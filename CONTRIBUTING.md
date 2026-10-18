@@ -22,6 +22,8 @@ Highlighting is generated from EasyCrypt's lexer, so new keywords are picked up 
 node scripts/gen-grammar.mjs path/to/easycrypt/src/ecLexer.mll
 ```
 
+Every Monday, the Grammar workflow regenerates it from the lexer on EasyCrypt's `main` branch and, if the keywords changed, tests the result and opens a pull request with it; merge it to take the new keywords. It can also be started by hand from the Actions tab. For it to open pull requests, "Allow GitHub Actions to create and approve pull requests" must be on in the repository's Settings, under Actions, General.
+
 `node scripts/corpus-check.mjs file.ec ...` runs whole files through the extension's command splitter and EasyCrypt, to check that both agree on where commands end.
 
 ## Releasing
