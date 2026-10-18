@@ -33,7 +33,9 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The Publish workflow then tests and packages the extension, publishes it to Open VSX with the token stored in the repository secret `OVSX_PAT`, and creates a GitHub release with the version's changelog and the `.vsix` attached. It stops if the tag is not the version in `package.json`.
+The Publish workflow then tests and packages the extension, publishes it to Open VSX, and creates a GitHub release with the version's changelog and the `.vsix` attached. It stops if the tag is not the version in `package.json`.
+
+Open VSX needs no token: this repository and `publish.yml` are registered as the extension's trusted publisher on open-vsx.org (Settings, Trusted Publishers), so the workflow proves who it is with a short-lived token from GitHub. Renaming the workflow file means registering it again.
 
 The Visual Studio Marketplace is updated by hand: download the `.vsix` from the release and upload it on the publisher's page at [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage), with Update in the extension's menu (New extension, then Visual Studio Code, the first time).
 

@@ -1,6 +1,7 @@
 # Publishes the extension when a version tag such as v0.1.0 is pushed: to
-# Open VSX, with the token in the repository secret OVSX_PAT, and as a GitHub
-# release with the package attached, to upload to the Marketplace by hand.
+# Open VSX, as the trusted publisher registered there for this workflow (no
+# token), and as a GitHub release with the package attached, to upload to the
+# Marketplace by hand.
 
 name: Publish
 
@@ -13,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # to create the release
+      id-token: write # to prove to Open VSX that this workflow is publishing
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -32,9 +34,7 @@ jobs:
         run: npm run package
       # --skip-duplicate: running the job again does not fail where it already worked.
       - name: Publish to Open VSX
-        run: npx ovsx publish --packagePath "easycrypt-companion-${GITHUB_REF_NAME#v}.vsix" --skip-duplicate
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx ovsx publish --packagePath "easycrypt-companion-${GITHUB_REF_NAME#v}.vsix" --skip-duplicate --trusted-publishing
       - name: Create the GitHub release
         run: |
           version="${GITHUB_REF_NAME#v}"
