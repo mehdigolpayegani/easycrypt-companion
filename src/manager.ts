@@ -1,7 +1,7 @@
 // Connects ProofSessions to VS Code: one session per script, region
 // decorations, error diagnostics, the panes and the status bar.
 
-import { delimiter, dirname, isAbsolute } from "node:path";
+import { basename, delimiter, dirname, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import * as vscode from "vscode";
 import { resolveExecutable } from "./executable";
@@ -91,13 +91,12 @@ export class SessionManager implements vscode.Disposable {
 
   // --- Finding the session a command applies to ---
 
-  /** The active script editor, or the last script used. */
+  /** The active script editor, else the visible one whose goals are shown, else any visible script. */
   scriptEditor(): vscode.TextEditor | undefined {
     const active = vscode.window.activeTextEditor;
     if (active && isScript(active.document)) return active;
-    const doc = this.current?.doc;
-    if (!doc) return undefined;
-    return vscode.window.visibleTextEditors.find((e) => e.document === doc);
+    const visible = vscode.window.visibleTextEditors.filter((e) => isScript(e.document));
+    return visible.find((e) => e.document === this.current?.doc) ?? visible[0];
   }
 
   /** The session for `doc`, created on first use. */
@@ -198,6 +197,11 @@ export class SessionManager implements vscode.Disposable {
       if (entry && entry !== this.current) {
         this.current = entry;
         this.refresh(entry);
+      } else if (!entry) {
+        // Not the goals of another script.
+        this.current = undefined;
+        const name = basename(editor.document.uri.path);
+        this.panels.update("", `EasyCrypt is not running on ${name} yet. It starts with the first proof command.`);
       }
     }
     this.updateStatus();

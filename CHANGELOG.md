@@ -4,6 +4,7 @@
 
 - A button in the title bar, and `C-x 1`, hide or show the goals and response panes.
 - Closing the last script closes the panes too, so they do not take its place.
+- A script not started yet no longer shows the goals of another script.
 
 ## 0.1.1
 

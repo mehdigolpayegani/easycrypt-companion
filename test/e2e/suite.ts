@@ -593,6 +593,25 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
+    "the panes show the goals of the script in front, or that it is not started",
+    async () => {
+      await open("proof.ec");
+      await exec("next");
+      await idle();
+      const goals = paneText(GOALS_URI);
+      const response = paneText(RESPONSE_URI);
+      const { writeFileSync } = await import("node:fs");
+      writeFileSync(join(workspace(), "Unstarted.ec"), "lemma u : true by [].\n");
+
+      await open("Unstarted.ec");
+      await paneShows(RESPONSE_URI, /not running on Unstarted\.ec/);
+      assert.equal(paneText(GOALS_URI), "", "not the goals of proof.ec");
+      await open("proof.ec");
+      await paneShows(GOALS_URI, goals);
+      await paneShows(RESPONSE_URI, response);
+    },
+  ],
+  [
     "closing the scripts closes the panes, so they do not take their place",
     async () => {
       await open("proof.ec");
