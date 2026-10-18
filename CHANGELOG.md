@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A button in the title bar, and `C-x 1`, hide or show the goals and response panes.
+- Closing the last script closes the panes too, so they do not take its place.
 
 ## 0.1.1
 

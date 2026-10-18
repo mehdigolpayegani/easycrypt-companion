@@ -530,6 +530,8 @@ const tests: Array<[string, () => Promise<void>]> = [
         await idle();
         await waitFor("failure message", () => /exited|not found/i.test(paneText(RESPONSE_URI)));
         assert.equal(api.currentSession()!.running, false);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+        await vscode.commands.executeCommand("workbench.action.revertAndCloseActiveEditor");
       } finally {
         await config.update("executable", undefined, vscode.ConfigurationTarget.Global);
       }
@@ -588,6 +590,37 @@ const tests: Array<[string, () => Promise<void>]> = [
       await waitFor("the panes to close", () => panes().length === 0, 10_000);
       await exec("togglePanes");
       await waitFor("the panes to be opened", () => panes().length === 2, 10_000);
+    },
+  ],
+  [
+    "closing the scripts closes the panes, so they do not take their place",
+    async () => {
+      await open("proof.ec");
+      await exec("next");
+      await idle();
+      const isPane = (tab: vscode.Tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === GOALS_URI.scheme;
+      const tabs = () => vscode.window.tabGroups.all.flatMap((group) => group.tabs);
+      await waitFor("the panes", () => tabs().filter(isPane).length === 2, 10_000);
+      // Earlier tests left edits; closing must not stop to ask about them.
+      for (const doc of vscode.workspace.textDocuments.filter((d) => d.isDirty)) {
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+        await vscode.commands.executeCommand("workbench.action.files.revert");
+      }
+      const others = tabs().filter((tab) => !isPane(tab));
+      assert.ok(others.every((tab) => !tab.isDirty), "nothing to save");
+
+      await vscode.window.tabGroups.close(others);
+      await waitFor("the panes to close too", () => tabs().length === 0, 10_000);
+
+      // The next script starts the three panes again, in their places.
+      const editor = await open("proof.ec");
+      await exec("next");
+      await idle();
+      await waitFor("the panes back", () => tabs().filter(isPane).length === 2, 10_000);
+      const column = (uri: vscode.Uri) => vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === uri.toString())?.viewColumn;
+      assert.equal(column(editor.document.uri), vscode.ViewColumn.One);
+      assert.equal(column(GOALS_URI), vscode.ViewColumn.Two);
+      assert.equal(column(RESPONSE_URI), vscode.ViewColumn.Three);
     },
   ],
   // Last: it moves the focus into a pane, which VS Code then keeps reporting

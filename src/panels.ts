@@ -10,6 +10,8 @@ const OUTPUT_LANGUAGE = "easycrypt-output";
 
 export type Layout = "threePane" | "beside" | "manual";
 
+const UNLOCK = "workbench.action.unlockEditorGroup";
+
 const THREE_PANE = {
   orientation: 0,
   groups: [{ size: 0.55 }, { size: 0.45, groups: [{ size: 0.65 }, { size: 0.35 }] }],
@@ -22,6 +24,8 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
   readonly onDidChange = this.emitter.event;
   private goals = "";
   private response = "";
+  // With the scripts closed, the panes would take their place.
+  private readonly closer = vscode.window.tabGroups.onDidChangeTabs(() => void closeIfAlone());
 
   provideTextDocumentContent(uri: vscode.Uri): string {
     return uri.path === GOALS_URI.path ? this.goals : this.response;
@@ -100,6 +104,7 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
           selection: script.selection,
           preview: false,
         });
+        await vscode.commands.executeCommand(UNLOCK, script.document.uri);
       }
     }
     await this.showPanes(effective, true, true);
@@ -117,8 +122,19 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
   }
 
   dispose(): void {
+    this.closer.dispose();
     this.emitter.dispose();
   }
+}
+
+/** Closes the panes once nothing else is left in the editor area. */
+async function closeIfAlone(): Promise<void> {
+  const panes = paneTabs();
+  const others = vscode.window.tabGroups.all.some((group) => group.tabs.some((tab) => !panes.includes(tab)));
+  if (panes.length === 0 || others) return;
+  await vscode.window.tabGroups.close(panes);
+  // The group VS Code keeps may be a locked pane group; the next script goes there.
+  if (vscode.window.tabGroups.all.length === 1) await vscode.commands.executeCommand(UNLOCK);
 }
 
 function paneTabs(): vscode.Tab[] {
