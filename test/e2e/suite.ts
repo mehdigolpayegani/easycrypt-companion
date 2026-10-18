@@ -536,7 +536,7 @@ const tests: Array<[string, () => Promise<void>]> = [
     },
   ],
   [
-    "the panes can be hidden and shown again",
+    "the panes can be hidden and come back as they were",
     async () => {
       await open("proof.ec");
       await exec("next");
@@ -544,21 +544,50 @@ const tests: Array<[string, () => Promise<void>]> = [
       const panes = () =>
         vscode.window.tabGroups.all
           .flatMap((group) => group.tabs)
-          .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === GOALS_URI.scheme).length;
-      await waitFor("the panes", () => panes() === 2, 10_000);
+          .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === GOALS_URI.scheme);
+      type Layout = { orientation?: number; size?: number; groups?: Layout[] };
+      const layout = () => vscode.commands.executeCommand<Layout>("vscode.getEditorLayout");
+      /** Same shape, sizes within a pixel or two. */
+      const same = (a: Layout, b: Layout): boolean =>
+        Math.abs((a.size ?? 0) - (b.size ?? 0)) <= 2 &&
+        (a.groups ?? []).length === (b.groups ?? []).length &&
+        (a.groups ?? []).every((g, i) => same(g, b.groups![i]));
+      await waitFor("the panes", () => panes().length === 2, 10_000);
+      // Sizes of the user's own, not the default ones.
+      await vscode.commands.executeCommand("vscode.setEditorLayout", {
+        orientation: 0,
+        groups: [{ size: 0.7 }, { size: 0.3, groups: [{ size: 0.4 }, { size: 0.6 }] }],
+      });
+      const before = await layout();
       const processed = api.currentSession()!.processed.length;
+      const response = paneText(RESPONSE_URI);
 
       await exec("togglePanes");
-      await waitFor("the panes to close", () => panes() === 0 && vscode.window.tabGroups.all.length === 1, 10_000);
+      await waitFor("the panes to be hidden", () => panes().length === 0 && vscode.window.tabGroups.all.length === 1, 10_000);
       assert.equal(api.currentSession()!.processed.length, processed, "EasyCrypt keeps its state");
       await exec("togglePanes");
-      await waitFor("the panes to come back", () => panes() === 2 && vscode.window.tabGroups.all.length === 3, 10_000);
+      await waitFor("the panes to come back", () => panes().length === 2, 10_000);
+      assert.ok(same(await layout(), before), `with the same sizes: ${JSON.stringify(await layout())} vs ${JSON.stringify(before)}`);
+      await paneShows(RESPONSE_URI, response); // and the same text
 
       await exec("togglePanes");
-      await waitFor("the panes to close again", () => panes() === 0, 10_000);
+      await waitFor("the panes to be hidden again", () => panes().length === 0, 10_000);
       await exec("next");
       await idle();
-      await waitFor("the next command to bring them back", () => panes() === 2, 10_000);
+      await waitFor("the next command to bring them back", () => panes().length === 2, 10_000);
+      assert.ok(same(await layout(), before), "as they were");
+
+      // VS Code's own maximize is undone by the next command too.
+      await vscode.commands.executeCommand("workbench.action.toggleMaximizeEditorGroup");
+      await exec("next");
+      await idle();
+      await waitFor("the maximize to be undone", async () => same(await layout(), before), 10_000);
+
+      // Closed by hand, they are opened again.
+      await vscode.window.tabGroups.close(panes());
+      await waitFor("the panes to close", () => panes().length === 0, 10_000);
+      await exec("togglePanes");
+      await waitFor("the panes to be opened", () => panes().length === 2, 10_000);
     },
   ],
   // Last: it moves the focus into a pane, which VS Code then keeps reporting

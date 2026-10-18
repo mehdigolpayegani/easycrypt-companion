@@ -10,8 +10,15 @@ const OUTPUT_LANGUAGE = "easycrypt-output";
 
 export type Layout = "threePane" | "beside" | "manual";
 
+const THREE_PANE = {
+  orientation: 0,
+  groups: [{ size: 0.55 }, { size: 0.45, groups: [{ size: 0.65 }, { size: 0.35 }] }],
+};
+
 export class Panels implements vscode.TextDocumentContentProvider, vscode.Disposable {
   private readonly emitter = new vscode.EventEmitter<vscode.Uri>();
+  /** The editor layout when the panes were hidden, to give it back. */
+  private hiddenLayout?: GroupLayout;
   readonly onDidChange = this.emitter.event;
   private goals = "";
   private response = "";
@@ -38,6 +45,15 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
   /** Opens the panes if hidden, following the layout setting. */
   async ensureVisible(layout: Layout): Promise<void> {
     if (layout === "manual") return;
+    // Maximized with View: Toggle Maximize Editor Group.
+    if (this.open && (await squeezed())) {
+      await toggleMaximized();
+      return;
+    }
+    if (this.hiddenLayout && !this.open) {
+      await this.reopen(layout);
+      return;
+    }
     const goalsVisible = isVisible(GOALS_URI);
     const responseVisible = isVisible(RESPONSE_URI);
     if (goalsVisible && responseVisible) return;
@@ -53,20 +69,31 @@ export class Panels implements vscode.TextDocumentContentProvider, vscode.Dispos
     return paneTabs().length > 0;
   }
 
-  /** Closes both panes; their groups close with them, so the script takes the whole width. */
-  async hide(): Promise<void> {
-    await vscode.window.tabGroups.close(paneTabs());
+  /** C-x 1: closes the panes, remembering the layout, or shows them again as they were. */
+  async toggle(layout: Layout): Promise<void> {
+    if (this.open) {
+      this.hiddenLayout = await vscode.commands.executeCommand<GroupLayout>("vscode.getEditorLayout");
+      await vscode.window.tabGroups.close(paneTabs());
+    } else {
+      await this.reopen(layout);
+    }
   }
 
-  /** C-c C-l: arranges the editor area and shows both panes. */
-  async arrange(layout: Layout): Promise<void> {
+  /** Shows the panes with the layout they had when hidden, unless the editor area was split since. */
+  private async reopen(layout: Layout): Promise<void> {
+    const saved = this.hiddenLayout;
+    if (saved && vscode.window.tabGroups.all.length === 1) await this.arrange(layout, saved);
+    else await this.arrange(layout);
+  }
+
+  /** C-c C-l: arranges the editor area, with `editorLayout` or the default sizes, and shows both panes. */
+  async arrange(layout: Layout, editorLayout?: GroupLayout): Promise<void> {
+    this.hiddenLayout = undefined;
+    if (await squeezed()) await toggleMaximized();
     const script = vscode.window.activeTextEditor;
     const effective = layout === "manual" ? "threePane" : layout;
-    if (effective === "threePane") {
-      await vscode.commands.executeCommand("vscode.setEditorLayout", {
-        orientation: 0,
-        groups: [{ size: 0.55 }, { size: 0.45, groups: [{ size: 0.65 }, { size: 0.35 }] }],
-      });
+    if (editorLayout || effective === "threePane") {
+      await vscode.commands.executeCommand("vscode.setEditorLayout", editorLayout ?? THREE_PANE);
       if (script && script.document.uri.scheme !== SCHEME) {
         await vscode.window.showTextDocument(script.document, {
           viewColumn: vscode.ViewColumn.One,
@@ -98,6 +125,24 @@ function paneTabs(): vscode.Tab[] {
   return vscode.window.tabGroups.all
     .flatMap((group) => group.tabs)
     .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === SCHEME);
+}
+
+interface GroupLayout {
+  orientation?: number;
+  size?: number;
+  groups?: GroupLayout[];
+}
+
+/** Whether a maximized group leaves the others no room. */
+async function squeezed(): Promise<boolean> {
+  const layout = await vscode.commands.executeCommand<GroupLayout | undefined>("vscode.getEditorLayout");
+  const empty = (groups: GroupLayout[] = []): boolean => groups.some((g) => g.size === 0 || empty(g.groups));
+  return empty(layout?.groups);
+}
+
+/** Undoes a maximized group, or maximizes the active one. */
+async function toggleMaximized(): Promise<void> {
+  await vscode.commands.executeCommand("workbench.action.toggleMaximizeEditorGroup");
 }
 
 function isVisible(uri: vscode.Uri): boolean {
