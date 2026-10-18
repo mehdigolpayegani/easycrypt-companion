@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- An icon.
+
 ## 0.1.0
 
 First version. Requires VS Code 1.92 or later.

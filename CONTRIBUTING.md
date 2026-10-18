@@ -39,4 +39,10 @@ Open VSX needs no token: this repository and `publish.yml` are registered as the
 
 The Visual Studio Marketplace is updated by hand: download the `.vsix` from the release and upload it on the publisher's page at [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage), with Update in the extension's menu (New extension, then Visual Studio Code, the first time).
 
+The icon is drawn in `images/icon.svg`; after changing it, regenerate the PNG the package uses:
+
+```sh
+rsvg-convert -w 256 -h 256 images/icon.svg -o images/icon.png
+```
+
 `npm run package` builds the `.vsix` locally, for trying it with "Install from VSIX...".
